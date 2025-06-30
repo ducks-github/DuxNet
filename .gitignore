@@ -1,0 +1,3 @@
+# Ignore build output and ISO files
+duxos_live_build/
+*.iso
