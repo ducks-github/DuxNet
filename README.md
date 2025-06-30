@@ -22,6 +22,7 @@ Distributed API/App Store with Flop Coin:
 Dux OS includes a decentralized API and application marketplace. Nodes can publish services and charge others Flop Coin per use.
 
 Flop Coin:
+https://github.com/Flopcoin/Flopcoin.git
 - The native digital currency of Dux OS.
 - Used for buying and selling API/app access.
 - Managed through local, secure wallets.
