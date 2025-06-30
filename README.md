@@ -66,4 +66,140 @@ Benefits:
 ---------
 - Allows developers to monetize software usage.
 - Encourages useful computation rather than wasteful mining.
+
+
+# Dux Net Payment System - High-Level Specification
+
+## Overview
+
+The Dux Net payment system is an integrated, decentralized escrow-based economy built into every Dux OS installation. It enables secure, automated payments using Flop Coin for API/app usage on the network, with a built-in 5% tax redirected to a community fund. When the fund reaches 100 Flop Coin, it is evenly airdropped to all verified, active Dux OS nodes.
+
+---
+
+## System Components
+
+### 1. **Flop Coin Wallet Daemon (**``**)**
+
+- Installed by default on every Dux OS node.
+- Handles key generation, wallet management, sending/receiving Flop Coin.
+- Provides RPC interface for interaction with other components.
+
+### 2. **Escrow Daemon (**``**)**
+
+- Manages temporary storage of payments when a user requests a paid API.
+- Validates task completion before releasing funds.
+- Distributes 95% to API developer, 5% to community fund wallet.
+- Stores logs for transparency.
+
+### 3. **Community Fund Wallet**
+
+- Shared wallet known to all Dux OS nodes.
+- Accumulates 5% tax from all paid transactions.
+- Visible in the wallet GUI.
+
+### 4. **Airdrop Service (**``**)**
+
+- Monitors the community fund balance.
+- Triggers airdrop to all verified active Dux OS nodes when balance ≥ 100 Flop Coin.
+- Uses deterministic user verification (e.g., proof of recent task completion or system heartbeat).
+
+### 5. **Dux OS Wallet & GUI**
+
+- Displays:
+  - Wallet balance
+  - Transaction history
+  - Escrow activity
+  - Community fund balance
+  - Upcoming airdrops
+- Allows user interaction with Flop Coin features and transparency tools.
+
+### 6. **Dux Net Task Engine**
+
+- Responsible for distributing and executing API tasks.
+- Interfaces with `dux-escrowd` to initiate and confirm payments.
+
+---
+
+## Functional Flow
+
+### API Transaction Example
+
+1. User selects and calls a paid API (e.g., 10 Flop).
+2. `dux-escrowd` moves 10 Flop into escrow.
+3. API is executed by the provider node.
+4. Upon verification:
+   - 9.5 Flop sent to API provider's wallet
+   - 0.5 Flop sent to community fund
+5. GUI updates transaction history and displays success.
+
+### Airdrop Trigger Flow
+
+1. Community fund hits 100 Flop Coin.
+2. `dux-airdropd` calculates eligible nodes.
+3. 100 Flop divided equally among them.
+4. Airdrop is logged and shown in all GUIs.
+
+---
+
+## Governance and Security
+
+- Parameters like tax %, minimum airdrop, and eligibility criteria are configurable via a Dux OS governance layer.
+- All transactions and fund changes are logged.
+- Anti-Sybil protections can be enforced using proof of computation or heartbeat verifications.
+
+---
+
+## Deployment Notes
+
+- All daemons are enabled at boot and require no user setup.
+- Systemd services: `dux-flopd`, `dux-escrowd`, `dux-airdropd`.
+- Logs and configs stored in `/etc/duxnet/` and `/var/log/duxnet/`.
+
+---
+
+## Future Considerations
+
+- Add smart contract capability to Flop Coin for greater escrow automation.
+- Implement community voting on community fund use or redistribution models.
+- Integrate with other decentralized identity systems for fairer airdrop allocation.
+
+---
+
+# Dux Net Payment System - System Diagram
+
+```
++---------------------------+
+|     Dux OS Wallet GUI     |
+|---------------------------|
+| Wallet | Escrow | Airdrop |
++---------------------------+
+            |
+            v
++---------------------------+
+|  Flop Coin Wallet Daemon  |
+|       (dux-flopd)         |
++------------+--------------+
+             |
+             v
++---------------------------+
+|     Escrow Daemon         |
+|      (dux-escrowd)        |
++------------+--------------+
+             |
+   +---------+--------+
+   |                  |
+   v                  v
+ API Dev Wallet   Community Fund Wallet
+     (95%)               (5%)
+
+             v
++---------------------------+
+|   Airdrop Service         |
+|     (dux-airdropd)        |
++------------+--------------+
+             |
+             v
+   All Active Dux OS Nodes
+     (Equal Distribution)
+```
 - Builds a decentralized compute economy on Linux.
