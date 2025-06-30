@@ -166,6 +166,45 @@ The Dux Net payment system is an integrated, decentralized escrow-based economy 
 
 ---
 
+# Security and Logic Considerations
+
+The following considerations are critical for the secure and reliable operation of Dux OS and its payment system:
+
+## Node Eligibility and Airdrop Distribution
+- Node eligibility for airdrops must be clearly defined (e.g., proof of recent task completion, system heartbeat, or other verifiable activity).
+- Anti-Sybil mechanisms (such as proof-of-computation or identity verification) are required to prevent malicious actors from claiming multiple airdrop shares.
+- The method for dividing airdrops among eligible nodes should be deterministic and transparent.
+
+## Fractional Flop Coin and Rounding
+- All calculations involving Flop Coin (including the 5% tax) must specify how fractional values are handled (e.g., rounding rules, minimum transaction units) to avoid cumulative errors or disputes.
+
+## Transaction Rollback and Dispute Resolution
+- If an API call fails or is disputed, there must be a clear process for returning escrowed funds to the user.
+- A dispute resolution mechanism should be defined for handling failed or fraudulent transactions.
+
+## Wallet Security and Key Management
+- Private keys for wallets must be encrypted at rest and never exposed in plaintext.
+- Users should be encouraged to use strong passwords and backup their keys securely.
+
+## Community Fund Wallet Security
+- The community fund wallet must use multi-signature or threshold signature schemes to prevent unauthorized access.
+- The private key should never be distributed or stored in a way that allows a single node to control the fund.
+
+## API/App Store Security
+- All distributed APIs/Apps must run in secure sandboxes to prevent malicious code execution on user nodes.
+- Code review or automated scanning is recommended before publishing APIs/Apps to the marketplace.
+
+## Network Security
+- All communications between nodes, wallets, and daemons must be encrypted (e.g., using TLS) to prevent eavesdropping or tampering.
+
+## Rate Limiting and Abuse Prevention
+- Implement rate limiting and abuse prevention mechanisms to protect against spam, denial-of-service, and microtransaction attacks.
+
+## Governance and Configurability
+- The process for changing system parameters (tax %, airdrop minimums, eligibility criteria) must be transparent and require consensus or voting among stakeholders.
+
+---
+
 # Dux Net Payment System - System Diagram
 
 ```
