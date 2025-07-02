@@ -1,22 +1,26 @@
 #!/bin/bash
 
+# This script builds a custom Debian-based Dux_OS with XFCE desktop GUI.
+# It customizes the boot splash and desktop background using PNG files.
+# Usage: sudo ./build_duxos.sh [splash.png] [background.png]
+# If no arguments are provided, it uses duxos.png for both.
+
 # Check if the script is run as root
 if [ "$EUID" -ne 0 ]; then
-  echo "Please run as root"
+  echo "Please run this script as root (e.g., using sudo)."
   exit 1
 fi
 
-# Install live-build if not already installed
-if ! dpkg -l | grep -q live-build; then
-  apt update
-  apt install -y live-build
-fi
+# Get the directory of the script
+SCRIPT_DIR=$(dirname "$0")
+WORK_DIR="$SCRIPT_DIR/../build-workspace"
+ISO_OUTPUT="$SCRIPT_DIR/../Dux_OS.iso"
 
-# Get paths to the PNG files from arguments
-SPLASH_PNG=$1
-BACKGROUND_PNG=$2
+# Default to duxos.png if no arguments provided
+SPLASH_PNG="${1:-$SCRIPT_DIR/duxos.png}"
+BACKGROUND_PNG="${2:-$SCRIPT_DIR/duxos.png}"
 
-# Check if the provided PNG files exist
+# Check if the provided or default PNG files exist
 if [ ! -f "$SPLASH_PNG" ]; then
   echo "Splash PNG not found: $SPLASH_PNG"
   exit 1
@@ -27,9 +31,12 @@ if [ ! -f "$BACKGROUND_PNG" ]; then
   exit 1
 fi
 
-# Create and navigate to the build directory
-mkdir -p duxos-build
-cd duxos-build
+# Ensure working directory exists
+mkdir -p "$WORK_DIR"
+
+# Install required tools
+apt update
+apt install -y live-build debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin
 
 # Configure live-build
 lb config --distribution bullseye --debian-installer live --architectures amd64 --archive-areas "main contrib non-free"
@@ -70,4 +77,7 @@ chown -R 1000:1000 config/includes.chroot/home/user
 # Build the live ISO
 lb build
 
-echo "Build completed. ISO is located at live-image-amd64.hybrid.iso"
+# Move the resulting ISO to the specified output location
+mv live-image-amd64.hybrid.iso "$ISO_OUTPUT"
+
+echo "Build complete! ISO file created at: $ISO_OUTPUT"
