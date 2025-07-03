@@ -1,0 +1,4 @@
+# Example Dux OS Daemon Config
+heartbeat_interval: 10  # seconds
+duxnet_port: 9333  # TCP port for DuxNet peer-to-peer connections
+# Add more config options as needed 
