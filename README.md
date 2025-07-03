@@ -1,6 +1,122 @@
 # Dux_OS
 🐧 Dux OS is a decentralized, Debian-based Linux distribution for collaborative computing. Nodes share real-world computational tasks and monetize API/app usage using Flop Coin — a built-in digital currency.
 
+## 🏗️ Modular Architecture
+
+Dux_OS is built on a modular architecture that enables distributed computing, secure payments, and decentralized services. Each module operates independently but integrates seamlessly through standardized interfaces.
+
+### Current Modules
+
+#### 🔧 **Build System** (`build_script/`)
+- **Purpose**: Creates custom Debian-based live ISOs with Dux_OS branding
+- **Components**: 
+  - `build_duxos.sh` - Main build script for creating bootable ISOs
+  - `Dockerfile` - Containerized build environment
+  - `duxos.png` - Branding assets
+- **Interfaces**: Command-line build process, generates bootable ISO files
+
+#### 💰 **Wallet System** (`duxos_wallet/`)
+- **Purpose**: Manages Flop Coin transactions and wallet operations
+- **Components**:
+  - `wallet.py` - Python interface to Flopcoin Core via JSON-RPC
+  - `config.yaml` - Wallet configuration and RPC settings
+- **Interfaces**: JSON-RPC API, local wallet management, transaction signing
+- **Dependencies**: Flopcoin Core daemon, network connectivity
+
+#### 🔄 **Daemon Framework** (`duxos_daemon_template/`)
+- **Purpose**: Template for creating system daemons (escrow, airdrop, etc.)
+- **Components**:
+  - `daemon.py` - Base daemon class with lifecycle management
+  - `config.yaml` - Daemon configuration template
+  - `duxos-daemon.service` - systemd service template
+- **Interfaces**: systemd integration, config management, logging
+- **Usage**: Extended by other modules for background services
+
+### Planned Modules
+
+#### 🛡️ **Escrow System** (`duxos_escrow/`)
+- **Purpose**: Manages payment escrow for API transactions
+- **Features**: 
+  - Temporary fund holding during API calls
+  - Automatic distribution (95% to provider, 5% to community fund)
+  - Dispute resolution and refund mechanisms
+- **Interfaces**: Wallet API, Task Engine API, Community Fund API
+
+#### 🎁 **Airdrop Service** (`duxos_airdrop/`)
+- **Purpose**: Distributes community fund to active nodes
+- **Features**:
+  - Monitors community fund balance
+  - Verifies node eligibility (proof of computation)
+  - Executes automatic airdrops when threshold reached
+- **Interfaces**: Community Fund API, Node Registry API
+
+#### 🏪 **API/App Store** (`duxos_store/`)
+- **Purpose**: Decentralized marketplace for APIs and applications
+- **Features**:
+  - Service discovery and registration
+  - Rating and review system
+  - Distributed metadata storage (IPFS/DHT)
+- **Interfaces**: Task Engine API, Wallet API, Discovery Protocol
+
+#### ⚙️ **Task Engine** (`duxos_tasks/`)
+- **Purpose**: Distributes and executes computational tasks
+- **Features**:
+  - Task scheduling and load balancing
+  - Sandboxed execution environments
+  - Result verification and trust scoring
+- **Interfaces**: Store API, Wallet API, Node Registry API
+
+#### 🌐 **Node Registry** (`duxos_registry/`)
+- **Purpose**: Maintains network topology and node information
+- **Features**:
+  - Node discovery and health monitoring
+  - Reputation scoring system
+  - Network topology management
+- **Interfaces**: All other modules for node coordination
+
+### 🔗 Module Interoperability
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Build System  │    │  Wallet System  │    │ Daemon Framework│
+│                 │    │                 │    │                 │
+│ • ISO Creation  │    │ • Flop Coin     │    │ • Service Mgmt  │
+│ • Branding      │    │ • Transactions  │    │ • Config        │
+│ • Distribution  │    │ • RPC Interface │    │ • Logging       │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                    ┌─────────────────┐
+                    │  Core Services  │
+                    │                 │
+                    │ • Escrow        │
+                    │ • Airdrop       │
+                    │ • Task Engine   │
+                    │ • Store         │
+                    │ • Registry      │
+                    └─────────────────┘
+```
+
+### 🔄 Data Flow Example
+
+1. **Service Publication**: Developer uses Store module to register API
+2. **Service Discovery**: User browses Store, finds desired API
+3. **Task Execution**: Task Engine distributes request to provider node
+4. **Payment Processing**: Escrow holds funds, Wallet processes transaction
+5. **Community Distribution**: Airdrop service monitors fund balance
+6. **Network Coordination**: Registry tracks all node activities
+
+### 🛠️ Development Guidelines
+
+- **Standardized Interfaces**: All modules use JSON-RPC or REST APIs
+- **Configuration**: YAML-based config files for all modules
+- **Logging**: Structured logging with configurable levels
+- **Security**: Sandboxed execution, encrypted communications
+- **Testing**: Unit tests for each module, integration tests for workflows
+
+---
+
 Dux Operating System (Dux OS)
 =============================
 
@@ -61,7 +177,7 @@ Use Case Example:
 -----------------
 - Alice publishes an image upscaling API (1 Flop Coin per call).
 - Bob discovers it and sends an image.
-- Service executes, Bob’s wallet is debited, Alice earns.
+- Service executes, Bob's wallet is debited, Alice earns.
 
 Benefits:
 ---------
