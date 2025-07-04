@@ -434,6 +434,20 @@ This document provides a comprehensive step-by-step plan for building all Dux_OS
    - [ ] Assess user satisfaction
    - [ ] Evaluate security posture
 
+# Immediate Next Steps for Phase 2.1: Node Registry
+
+## In Progress / Completed
+- [x] Install required dependencies: fastapi, pydantic, uvicorn
+- [x] Implement node registration API endpoint and logic
+- [x] Add basic in-memory storage for registered nodes
+- [x] Test the node registration endpoint via HTTP request
+- [x] Implement node discovery API (filter/query by capability, status)
+
+## Next Steps
+- [ ] Implement node health monitoring system (**Next**)
+- [ ] Add reputation scoring algorithm (**Planned**)
+- [ ] Add node capability management (**Planned**)
+
 ---
 
 **Document Version**: 1.0  
