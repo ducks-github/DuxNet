@@ -22,6 +22,11 @@ class DuxOSDaemon:
         while self.running:
             # --- Main daemon logic goes here ---
             logging.info('Daemon heartbeat...')
+            # TODO: Add REST API server capabilities (e.g., Flask/FastAPI integration)
+            # TODO: Implement configuration hot-reloading (watch config file for changes)
+            # TODO: Add health check endpoints (HTTP or local socket)
+            # TODO: Create service discovery integration (e.g., broadcast presence)
+            # TODO: Add metrics and monitoring hooks (e.g., Prometheus, custom logs)
             time.sleep(self.config.get('heartbeat_interval', 10))
         logging.info('Daemon stopped.')
 

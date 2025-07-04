@@ -2,3 +2,20 @@
 heartbeat_interval: 10  # seconds
 duxnet_port: 9333  # TCP port for DuxNet peer-to-peer connections
 # Add more config options as needed 
+
+database:
+  uri: "sqlite:///duxos.db"  # TODO: Replace with production DB
+message_queue:
+  type: "redis"  # TODO: Replace with actual queue system
+  uri: "redis://localhost:6379/0"
+logging:
+  level: "INFO"
+  file: "daemon.log"
+monitoring:
+  enabled: false  # TODO: Integrate with Prometheus or similar
+  endpoint: ""
+security:
+  tls_enabled: false  # TODO: Enable TLS/SSL
+  cert_path: ""
+  key_path: ""
+  rate_limit_per_minute: 60  # TODO: Implement rate limiting 
