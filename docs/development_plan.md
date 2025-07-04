@@ -88,7 +88,7 @@ Closes: Issue or feature reference
   - [x] Implement node discovery mechanism
   - [x] **Create node health monitoring system** ✅ **COMPLETED**
   - [x] **Build reputation scoring algorithm** ✅ **COMPLETED**
-  - [ ] Implement node capability management
+  - [x] **Implement node capability management** ✅ **COMPLETED**
 
 - [x] **API and interfaces**
   - [x] Create REST API for node operations
@@ -168,7 +168,7 @@ Closes: Issue or feature reference
 
 **Next Steps for Node Registry**:
 - [x] **Implement reputation scoring algorithm** ✅ **COMPLETED**
-- [ ] Add node capability management
+- [x] **Add node capability management** ✅ **COMPLETED**
 - [ ] Enhance P2P communication protocol
 - [ ] Add advanced topology management
 
@@ -222,6 +222,53 @@ Closes: Issue or feature reference
 - **Files Changed**: 4 files, 196 insertions(+), 8 deletions(-)
 - **Branch**: main
 - **Status**: Committed and ready for push to GitHub
+
+#### 2.1.3 Database Registry Service ✅ **COMPLETED**
+**Implementation Date**: [Current Date]
+**Status**: Fully implemented with type safety
+
+**Key Features Delivered**:
+- [x] **Database-Backed Node Registry Service**
+  - [x] Complete CRUD operations for node management
+  - [x] Capability management (add/remove capabilities)
+  - [x] Node status and heartbeat tracking
+  - [x] Reputation update functionality
+  - [x] Advanced node querying by capabilities
+
+- [x] **Type Safety and Error Handling**
+  - [x] Proper Optional type annotations for all parameters
+  - [x] SQLAlchemy column type conversion and handling
+  - [x] Comprehensive null checks and error handling
+  - [x] Return type safety with None filtering
+  - [x] Variable shadowing resolution
+
+- [x] **Repository Pattern Implementation**
+  - [x] Clean separation between service and data access layers
+  - [x] Transaction management with rollback on errors
+  - [x] Proper database session handling
+  - [x] Repository-based data access for maintainability
+
+- [x] **Advanced Querying Capabilities**
+  - [x] Node filtering by single or multiple capabilities
+  - [x] Match-all vs match-any capability filtering
+  - [x] Active node filtering and status management
+  - [x] Capability statistics and reporting
+
+**Files Created**:
+- `duxos_registry/services/database_registry.py` - Main database registry service (254 lines)
+
+**Technical Implementation**:
+- **Architecture**: Repository pattern with service layer abstraction
+- **Type Safety**: Full mypy compliance with strict type checking
+- **Database**: SQLAlchemy ORM with proper session management
+- **Error Handling**: Comprehensive exception handling with rollback
+- **Performance**: Efficient querying with proper indexing support
+
+**Git Workflow**:
+- **Commit**: 6cdb47d - "fix(registry): resolve all linter errors in database_registry.py"
+- **Files Changed**: 1 file, 269 insertions(+)
+- **Branch**: main
+- **Status**: Committed and pushed to GitHub
 
 #### 2.2 Wallet System Integration
 - [ ] **Flopcoin Core integration**
