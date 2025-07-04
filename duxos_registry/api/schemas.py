@@ -71,4 +71,74 @@ class CapabilityStatisticsResponse(BaseModel):
     custom_capabilities: list[str]
 
 class AvailableCapabilitiesResponse(BaseModel):
-    capabilities: list[str] 
+    capabilities: list[str]
+
+
+# Wallet Management Schemas
+class WalletCreateRequest(BaseModel):
+    node_id: str
+    wallet_name: str
+    auth_data: dict | None = None
+
+class WalletCreateResponse(BaseModel):
+    success: bool
+    message: str
+    wallet: dict | None = None
+
+class WalletInfo(BaseModel):
+    id: int
+    node_id: str
+    wallet_name: str
+    address: str
+    wallet_type: str
+    balance: float
+    is_active: bool
+    created_at: str | None = None
+    updated_at: str | None = None
+
+class WalletBalanceResponse(BaseModel):
+    success: bool
+    node_id: str
+    wallet_name: str
+    address: str
+    balance: float
+    currency: str
+    message: str | None = None
+
+class TransactionSendRequest(BaseModel):
+    node_id: str
+    recipient_address: str
+    amount: float
+    auth_data: dict | None = None
+
+class TransactionSendResponse(BaseModel):
+    success: bool
+    txid: str | None = None
+    amount: float | None = None
+    recipient: str | None = None
+    transaction: dict | None = None
+    message: str | None = None
+
+class TransactionInfo(BaseModel):
+    id: int
+    wallet_id: int
+    txid: str
+    recipient_address: str
+    amount: float
+    transaction_type: str
+    status: str
+    created_at: str | None = None
+
+class TransactionHistoryResponse(BaseModel):
+    success: bool
+    node_id: str
+    wallet_name: str
+    transactions: list[TransactionInfo]
+    message: str | None = None
+
+class NewAddressResponse(BaseModel):
+    success: bool
+    node_id: str
+    new_address: str | None = None
+    wallet_name: str | None = None
+    message: str | None = None 

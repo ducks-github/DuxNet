@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# Mock Flopcoind for Dux OS Wallet Development
+
+# Function to start the mock RPC server
+start_daemon() {
+    echo "Starting mock Flopcoind (Flopcoin Core) daemon..."
+    
+    # Create a simple mock RPC server using Python
+    python3 << 'END'
+import json
+import random
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
+import time
+
+class MockFlopcoinRPC(BaseHTTPRequestHandler):
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        rpc_request = json.loads(post_data.decode('utf-8'))
+        
+        method = rpc_request.get('method', '')
+        
+        # Mock RPC responses
+        if method == 'getnewaddress':
+            response = {
+                'result': f'FLOP{random.randint(10000, 99999)}',
+                'error': None,
+                'id': rpc_request['id']
+            }
+        elif method == 'getbalance':
+            response = {
+                'result': round(random.uniform(0.1, 1000.0), 2),
+                'error': None,
+                'id': rpc_request['id']
+            }
+        elif method == 'sendtoaddress':
+            response = {
+                'result': f'TXID{random.randint(100000, 999999)}',
+                'error': None,
+                'id': rpc_request['id']
+            }
+        else:
+            response = {
+                'result': None,
+                'error': {'code': -32601, 'message': f'Method {method} not found'},
+                'id': rpc_request['id']
+            }
+        
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(response).encode('utf-8'))
+
+def run_server():
+    server_address = ('127.0.0.1', 32553)
+    httpd = HTTPServer(server_address, MockFlopcoinRPC)
+    print(f"Mock Flopcoind RPC server running on {server_address[0]}:{server_address[1]}")
+    httpd.serve_forever()
+
+# Run the server in a separate thread
+server_thread = threading.Thread(target=run_server, daemon=True)
+server_thread.start()
+
+# Keep the script running
+while True:
+    time.sleep(3600)
+END
+}
+
+# Check if daemon is already running
+if pgrep -f "MockFlopcoinRPC" > /dev/null; then
+    echo "Flopcoind daemon is already running."
+    exit 0
+fi
+
+# Start the daemon in the background
+start_daemon &
+
+# Wait a moment to ensure the server starts
+sleep 2
+
+echo "Mock Flopcoind daemon started successfully."
+exit 0 

@@ -17,7 +17,11 @@ except ImportError:
     # If running from tests directory, adjust the import
     import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-    from duxos_registry.main import app
+    import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from duxos_registry.main import app
 
 class TestNodeRegistryService:
     """Test cases for NodeRegistryService reputation functionality."""

@@ -1,6 +1,76 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "duxos-node-registry"
+version = "0.1.0"
+description = "Dux OS Node Registry Management CLI"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+dependencies = [
+    "argparse",
+    "ipaddress",
+    "base58"
+]
+
+[project.scripts]
+duxos-node-registry = "duxos.registry.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "flake8",
+    "black",
+    "mypy"
+]
+
+[tool.setuptools]
+packages = ["duxos"]
+
+[tool.poetry]
+name = "duxos"
+version = "0.1.0"
+description = "Decentralized Linux distribution for collaborative computing"
+authors = ["Dux OS Team <contact@duxos.org>"]
+readme = "README.md"
+packages = [{include = "duxos"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+requests = "^2.31.0"
+pyyaml = "^6.0.1"
+websockets = "^11.0.3"
+ipfshttpclient = "^0.8.0a2"
+ed25519 = "^1.5"
+systemd-python = "^235"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.3.1"
+mypy = "^1.3.0"
+flake8 = "^6.0.0"
+black = "^23.3.0"
+coverage = "^7.2.5"
+
+[tool.poetry.scripts]
+duxos-wallet = "duxos.wallet.cli:main"
+duxos-registry = "duxos.registry.cli:main"
+duxos-tasks = "duxos.tasks.cli:main"
+
+[tool.mypy]
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+
 [tool.black]
-line-length = 88
-exclude = 'venv'
+line-length = 100
+target-version = ['py39']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --cov=duxos --cov-report=term-missing"
 
 [tool.isort]
 profile = "black"

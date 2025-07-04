@@ -527,10 +527,10 @@ Project Link: [https://github.com/duxos/node-registry](https://github.com/duxos/
 
 # DuxOS Node Registry
 
-## Real Flopcoin Wallet Integration (Phase 2.2)
+## Real Flopcoin Wallet Integration & Desktop Environment (Phase 2.2)
 
 ### Overview
-DuxOS Node Registry now supports full integration with the real Flopcoin Core daemon. This enables live wallet operations, address management, and transaction processing on the Flopcoin blockchain.
+DuxOS Node Registry now supports full integration with the real Flopcoin Core daemon and includes a complete desktop environment. This enables live wallet operations, address management, transaction processing, and a modern GUI interface for the Flopcoin blockchain.
 
 ### Flopcoin Integration Features
 - Connects to a real Flopcoin Core daemon (v2.x)
@@ -540,6 +540,14 @@ DuxOS Node Registry now supports full integration with the real Flopcoin Core da
 - Transaction history and status
 - Blockchain/network info and fee estimation
 - Automated wallet backup
+
+### Desktop Environment Features
+- **Modern GUI** - Full desktop environment with XFCE integration
+- **Desktop Manager** - Custom DuxOS desktop manager with system monitoring
+- **Application Launcher** - Easy access to all DuxOS applications
+- **System Tray** - Real-time system resource monitoring
+- **Desktop Shortcuts** - Quick access to key applications
+- **Autostart Services** - Automatic startup of DuxOS services
 
 ### Setup Instructions
 1. **Install Flopcoin Core**
@@ -553,13 +561,25 @@ DuxOS Node Registry now supports full integration with the real Flopcoin Core da
 3. **Update Wallet Config**
    - Edit `duxos_wallet/config.yaml` with your RPC credentials and settings.
 
-4. **Test Integration**
+4. **Setup Desktop Environment (Optional)**
+   - Run `sudo python scripts/setup_desktop.py` to install XFCE and configure the desktop environment.
+   - Restart your system to apply changes.
+
+5. **Test Integration**
    - Run `python scripts/test_real_flopcoin.py` to verify wallet and blockchain connectivity.
 
 ### Usage
+
+#### Command Line
 - Use the wallet API/CLI for live Flopcoin operations.
 - Monitor blockchain sync status and wallet backups.
 - For production, enable wallet encryption and secure your RPC credentials.
+
+#### Desktop Environment
+- Start DuxOS Desktop: `python duxos_desktop/desktop_manager.py`
+- Or login to the desktop environment after setup
+- Use the sidebar to access all DuxOS applications
+- Monitor system resources via the system tray
 
 ### Troubleshooting
 - Ensure no mock daemons are running on the RPC port.
