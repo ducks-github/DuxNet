@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from duxos_registry.api.routes import router as node_router
+from .api.routes import router as node_router
 
 app = FastAPI(title="DuxOS Node Registry")
 
