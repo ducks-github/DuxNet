@@ -267,46 +267,13 @@ sandbox:
   allowed_commands: ["python", "node", "bash"]
 ```
 
-### Node Registry (`duxos_registry/`)
-
-**Purpose**: Maintains network topology and node information.
-
-**Technical Design**:
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│ Node Discovery  │    │ Health Monitor  │    │ Reputation Mgmt │
-│ (P2P Protocol)  │    │ (Heartbeat)     │    │ (Scoring)       │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-                    ┌─────────────────┐
-                    │  Registry API   │
-                    │                 │
-                    │ • Node List     │
-                    │ • Topology      │
-                    │ • Metrics       │
-                    └─────────────────┘
-```
-
-**Node Information Schema**:
-```json
-{
-  "node_id": "unique_node_identifier",
-  "wallet_address": "node_wallet_address",
-  "ip_address": "192.168.1.100",
-  "port": 8080,
-  "capabilities": ["api_hosting", "task_execution"],
-  "reputation_score": 0.85,
-  "total_tasks_completed": 1250,
-  "success_rate": 0.98,
-  "last_heartbeat": "2024-01-15T12:30:00Z",
-  "uptime": 86400,
-  "load_average": [0.5, 0.3, 0.2],
-  "available_memory": 4096,
-  "available_cpu": 4
-}
-```
+### 🌐 **Node Registry** (`duxos_registry/`)
+- **Purpose**: Maintains network topology and node information
+- **Features**:
+  - ✅ Node discovery and health monitoring
+  - ✅ Reputation scoring system
+  - ✅ Network topology management
+- **Interfaces**: All other modules for node coordination
 
 ## Security Architecture
 
@@ -374,6 +341,24 @@ sandbox:
 3. **Logging**: Implement structured logging with configurable levels
 4. **Testing**: Write unit tests and integration tests
 5. **Documentation**: Maintain API documentation and usage examples
+6. **Flopcoin Daemon Implementation**: 
+   - Develop a full-featured Flopcoin Core daemon with JSON-RPC API
+   - Implement core blockchain functionality:
+     * Transaction validation
+     * Block generation and verification
+     * Peer-to-peer network communication
+     * Wallet key management
+   - Ensure compatibility with the existing `duxos_wallet/` component
+   - Implement security features:
+     * Encrypted wallet storage
+     * Multi-signature support
+     * Transaction signing and verification
+   - Create comprehensive test suite covering:
+     * RPC method validation
+     * Transaction processing
+     * Network communication
+     * Edge case handling
+   - Develop detailed documentation for daemon configuration and usage
 
 ### API Design
 - **RESTful**: Use standard HTTP methods and status codes
