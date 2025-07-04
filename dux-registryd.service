@@ -1,0 +1,32 @@
+[Unit]
+Description=Dux_OS Health Monitor Daemon
+Documentation=https://github.com/duxos/duxos
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=duxnet
+Group=duxnet
+WorkingDirectory=/opt/duxos
+ExecStart=/usr/bin/python3 /opt/duxos/health_monitor.py start --config /etc/duxnet/registry.yaml
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dux-registryd
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/duxnet /var/lib/duxnet /etc/duxnet
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target 
