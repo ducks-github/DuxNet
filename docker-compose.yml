@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  duxos:
+    build: .
+    volumes:
+      - .:/app
+    command: python3
+    # Uncomment and set if you have a main script, e.g.:
+    # command: python3 duxos_registry/main.py 

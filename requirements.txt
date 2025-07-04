@@ -1,0 +1,22 @@
+# Core web framework (uncomment if needed)
+# flask
+# fastapi
+
+# HTTP requests
+requests
+
+# Testing
+pytest
+
+# Linting and formatting
+flake8
+black
+isort
+
+# Type checking
+mypy
+
+# Environment variables
+python-dotenv
+
+# Add other dependencies as needed below 
