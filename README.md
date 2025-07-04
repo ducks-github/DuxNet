@@ -359,3 +359,213 @@ The following considerations are critical for the secure and reliable operation 
      (Equal Distribution)
 ```
 - Builds a decentralized compute economy on Linux.
+
+# Dux OS Node Registry CLI
+
+## Overview
+
+The Dux OS Node Registry CLI is a powerful command-line tool for managing and monitoring nodes in the Dux OS ecosystem. It provides comprehensive functionality for node registration, health tracking, and reputation management.
+
+## Features
+
+- Register new nodes with detailed hardware specifications
+- Deregister nodes
+- List nodes with advanced filtering
+- Update node health metrics
+- Track node reputation
+- Flexible logging configuration
+
+## Prerequisites
+
+- Python 3.8+
+- pip
+- Virtual environment (recommended)
+
+## Installation
+
+### Option 1: Automated Installation (Recommended)
+
+1. Clone the repository:
+```bash
+git clone https://github.com/duxos/node-registry.git
+cd node-registry
+```
+
+2. Run the installation script:
+```bash
+./install.sh
+```
+
+This script will:
+- Check Python version compatibility
+- Create a virtual environment
+- Install the package and dependencies
+- Run tests
+- Verify CLI installation
+
+### Option 2: Manual Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/duxos/node-registry.git
+cd node-registry
+```
+
+2. Create a virtual environment:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+3. Install the package:
+```bash
+pip install -e .[dev]
+```
+
+### Verifying Installation
+
+After installation, you can verify the CLI is working:
+```bash
+# Activate the virtual environment (if not already active)
+source venv/bin/activate
+
+# Run the CLI help command
+duxos-node-registry --help
+```
+
+### Troubleshooting
+
+- Ensure you have Python 3.8+ installed
+- Make sure you're in the virtual environment before running the CLI
+- Check that all dependencies are installed correctly
+
+## Usage
+
+### Basic Commands
+
+#### Register a Node
+```bash
+duxos-node-registry register \
+    --wallet-address 0x1234567890abcdef1234567890abcdef12345678 \
+    --ip-address 192.168.1.100 \
+    --hostname my-node \
+    --os-version 22.04 \
+    --duxos-version 1.0.0 \
+    --cpu-cores 8 \
+    --memory-gb 16 \
+    --storage-gb 500 \
+    --gpu-enabled \
+    --gpu-model "NVIDIA RTX 3080"
+```
+
+#### List Nodes
+```bash
+# List all nodes
+duxos-node-registry list
+
+# List nodes with minimum specifications
+duxos-node-registry list \
+    --min-cpu 4 \
+    --min-memory 8 \
+    --min-storage 250 \
+    --min-reputation 0.7
+```
+
+#### Update Node Health
+```bash
+duxos-node-registry update-health NODE_ID \
+    --load-average 0.5 \
+    --memory-usage 65.5 \
+    --disk-usage 45.2
+```
+
+### Logging Options
+
+#### Console Logging Levels
+```bash
+# Default (INFO level)
+duxos-node-registry register ...
+
+# Verbose logging (DEBUG level)
+duxos-node-registry register ... --log-level DEBUG
+
+# Log to a file
+duxos-node-registry register ... --log-file /var/log/duxos/node_registry.log
+
+# Combine log level and file logging
+duxos-node-registry register ... \
+    --log-level DEBUG \
+    --log-file /var/log/duxos/node_registry.log
+```
+
+## Configuration
+
+The CLI supports various configuration options through command-line arguments. Use `--help` for detailed information:
+
+```bash
+duxos-node-registry --help
+duxos-node-registry register --help
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+## Contact
+
+Dux OS Team - support@duxos.org
+
+Project Link: [https://github.com/duxos/node-registry](https://github.com/duxos/node-registry)
+
+# DuxOS Node Registry
+
+## Real Flopcoin Wallet Integration (Phase 2.2)
+
+### Overview
+DuxOS Node Registry now supports full integration with the real Flopcoin Core daemon. This enables live wallet operations, address management, and transaction processing on the Flopcoin blockchain.
+
+### Flopcoin Integration Features
+- Connects to a real Flopcoin Core daemon (v2.x)
+- Secure RPC communication (configurable credentials)
+- Wallet creation, address generation, and balance queries
+- Send/receive FLOP transactions
+- Transaction history and status
+- Blockchain/network info and fee estimation
+- Automated wallet backup
+
+### Setup Instructions
+1. **Install Flopcoin Core**
+   - Download from: https://github.com/Flopcoin/Flopcoin/releases
+   - Extract and install `flopcoind` and `flopcoin-cli` to `/usr/local/bin`
+
+2. **Configure Flopcoin Daemon**
+   - Use `scripts/setup_flopcoin.py` to generate `~/.flopcoin/flopcoin.conf` with your chosen RPC password.
+   - Start the daemon: `flopcoind -daemon`
+
+3. **Update Wallet Config**
+   - Edit `duxos_wallet/config.yaml` with your RPC credentials and settings.
+
+4. **Test Integration**
+   - Run `python scripts/test_real_flopcoin.py` to verify wallet and blockchain connectivity.
+
+### Usage
+- Use the wallet API/CLI for live Flopcoin operations.
+- Monitor blockchain sync status and wallet backups.
+- For production, enable wallet encryption and secure your RPC credentials.
+
+### Troubleshooting
+- Ensure no mock daemons are running on the RPC port.
+- Check `~/.flopcoin/debug.log` for daemon errors.
+- Use `flopcoin-cli` for direct RPC testing.
+
+---
+
+For more details, see the `docs/` directory and the development plan.

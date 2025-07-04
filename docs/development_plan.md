@@ -333,12 +333,12 @@ Closes: Issue or feature reference
 - [ ] Add advanced topology management (optional)
 
 #### 2.2 Wallet System Integration
-- [ ] **Flopcoin Core integration**
-  - [ ] Implement secure RPC client
-  - [ ] Add transaction management
-  - [ ] Create address generation and management
-  - [ ] Implement balance tracking
-  - [ ] Add transaction history and auditing
+- [x] **Flopcoin Core integration**
+  - [x] Implement secure RPC client
+  - [x] Add transaction management
+  - [x] Create address generation and management
+  - [x] Implement balance tracking
+  - [x] Add transaction history and auditing
 
 - [ ] **Security features**
   - [ ] Implement wallet encryption
@@ -707,12 +707,12 @@ The Node Registry module is now fully implemented with all core features:
 - ✅ Comprehensive testing
 
 ## Next Priority: Phase 2.2 - Wallet System Integration
-- [ ] **Flopcoin Core integration** (**Next Priority**)
-  - [ ] Implement secure RPC client
-  - [ ] Add transaction management
-  - [ ] Create address generation and management
-  - [ ] Implement balance tracking
-  - [ ] Add transaction history and auditing
+- [x] **Flopcoin Core integration** (**Next Priority**)
+  - [x] Implement secure RPC client
+  - [x] Add transaction management
+  - [x] Create address generation and management
+  - [x] Implement balance tracking
+  - [x] Add transaction history and auditing
 - [ ] **Security features**
   - [ ] Implement wallet encryption
   - [ ] Add multi-signature support
@@ -725,3 +725,33 @@ The Node Registry module is now fully implemented with all core features:
 **Document Version**: 1.1  
 **Last Updated**: [Current Date]  
 **Next Review**: [Date + 2 weeks] 
+
+# DuxOS Node Registry Development Plan
+
+## Phase 2.2: Real Flopcoin Wallet Integration
+
+### Status: Complete ✅
+
+#### Summary
+- Integrated the real Flopcoin Core daemon with the DuxOS wallet system.
+- Updated wallet service to use live RPC calls for all wallet operations.
+- Added setup script (`scripts/setup_flopcoin.py`) for configuring and launching Flopcoin Core.
+- Created test script (`scripts/test_real_flopcoin.py`) to verify end-to-end wallet and blockchain functionality.
+- Updated wallet configuration (`duxos_wallet/config.yaml`) for real RPC credentials.
+- Removed mock daemons and ensured only the real Flopcoin Core is used.
+
+#### Testing
+- All wallet API and CLI tests pass with the real daemon.
+- Live address generation, balance checks, and transaction history confirmed.
+- Blockchain/network info and fee estimation working.
+
+#### Next Steps
+- Integrate wallet endpoints with the Node Registry API/UI.
+- Test live FLOP transactions (send/receive small amounts).
+- Enable wallet encryption and regular backups for production.
+- Monitor blockchain sync and network health.
+- Update user and developer documentation as needed.
+
+---
+
+For setup and troubleshooting, see the main `README.md` and `docs/`. 
