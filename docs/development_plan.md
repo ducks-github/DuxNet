@@ -4,6 +4,33 @@
 
 This document provides a comprehensive step-by-step plan for building all Dux_OS modules. The plan is organized by development phases, with each phase building upon the previous one to create a fully functional decentralized computing platform.
 
+## Git Workflow & Version Control
+
+### Development Workflow
+1. **Feature Development**: Create feature branches for major implementations
+2. **Staging**: Use `git add` to stage changes for specific features
+3. **Committing**: Write descriptive commit messages with conventional commit format
+4. **Pushing**: Push to GitHub after each completed feature
+5. **Documentation**: Update this development plan with completion status and Git details
+
+### Commit Message Format
+```
+type(scope): description
+
+- Detailed bullet points of changes
+- Files modified and their purposes
+- Technical implementation notes
+
+Closes: Issue or feature reference
+```
+
+### Version Control Best Practices
+- **Branch Strategy**: main branch for stable releases, feature branches for development
+- **Commit Frequency**: Commit after each logical unit of work
+- **Documentation**: Update development plan with Git commit hashes and status
+- **Testing**: Ensure all tests pass before committing
+- **Code Review**: Self-review changes before pushing to GitHub
+
 ## Development Phases
 
 ### Phase 1: Foundation & Infrastructure (Weeks 1-2)
@@ -60,7 +87,7 @@ This document provides a comprehensive step-by-step plan for building all Dux_OS
   - [x] Design node registration protocol
   - [x] Implement node discovery mechanism
   - [x] **Create node health monitoring system** ✅ **COMPLETED**
-  - [ ] Build reputation scoring algorithm
+  - [x] **Build reputation scoring algorithm** ✅ **COMPLETED**
   - [ ] Implement node capability management
 
 - [x] **API and interfaces**
@@ -140,10 +167,61 @@ This document provides a comprehensive step-by-step plan for building all Dux_OS
 - **Monitoring**: Structured logging, metrics collection, alert system
 
 **Next Steps for Node Registry**:
-- [ ] Implement reputation scoring algorithm
+- [x] **Implement reputation scoring algorithm** ✅ **COMPLETED**
 - [ ] Add node capability management
 - [ ] Enhance P2P communication protocol
 - [ ] Add advanced topology management
+
+#### 2.1.2 Reputation Scoring Algorithm ✅ **COMPLETED**
+**Implementation Date**: [Current Date]
+**Status**: Fully implemented and tested
+
+**Key Features Delivered**:
+- [x] **Event-Based Scoring System**
+  - [x] 7 predefined event types with configurable scoring values
+  - [x] Support for custom reputation deltas
+  - [x] Reputation clamping to maintain 0-100 range
+  - [x] Detailed response with old/new reputation and clamping status
+
+- [x] **Reputation Event Types**
+  - [x] task_success: +10 points (reward for successful task completion)
+  - [x] task_failure: -5 points (penalty for failed tasks)
+  - [x] task_timeout: -10 points (penalty for task timeouts)
+  - [x] malicious_behavior: -50 points (severe penalty for malicious actions)
+  - [x] health_milestone: +2 points (reward for health achievements)
+  - [x] uptime_milestone: +5 points (reward for uptime achievements)
+  - [x] community_contribution: +15 points (reward for community contributions)
+
+- [x] **API Integration**
+  - [x] POST /nodes/reputation endpoint with validation
+  - [x] ReputationUpdateRequest/Response schemas
+  - [x] Error handling for invalid event types and missing nodes
+  - [x] Built-in FastAPI documentation with event type descriptions
+
+- [x] **Service Architecture**
+  - [x] NodeReputationService with registry integration
+  - [x] ReputationEventType enum for type safety
+  - [x] Configurable reputation rules with add_custom_rule() method
+  - [x] Proper error handling and validation
+
+**Files Modified**:
+- `duxos_registry/services/registry.py` - Added update_node_reputation() method
+- `duxos_registry/services/reputation.py` - Implemented NodeReputationService
+- `duxos_registry/api/schemas.py` - Added reputation request/response schemas
+- `duxos_registry/api/routes.py` - Added reputation update endpoint
+
+**Technical Implementation**:
+- **Architecture**: Service-based design with clear separation of concerns
+- **Security**: Input validation, error handling, and type safety
+- **API**: RESTful endpoint with comprehensive documentation
+- **Integration**: Seamless integration with existing NodeRegistryService
+- **Extensibility**: Easy to add new event types and scoring rules
+
+**Git Workflow**:
+- **Commit**: 706d359 - "feat: Implement reputation scoring algorithm for Node Registry"
+- **Files Changed**: 4 files, 196 insertions(+), 8 deletions(-)
+- **Branch**: main
+- **Status**: Committed and ready for push to GitHub
 
 #### 2.2 Wallet System Integration
 - [ ] **Flopcoin Core integration**
