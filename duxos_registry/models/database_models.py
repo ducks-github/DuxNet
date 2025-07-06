@@ -40,7 +40,7 @@ class Node(Base):
 
     def set_metadata(self, metadata: Dict[str, Any]):
         """Set metadata from dictionary"""
-        self.node_metadata = json.dumps(metadata)
+        setattr(self, 'node_metadata', json.dumps(metadata))
 
 class Capability(Base):
     __tablename__ = "capabilities"
@@ -78,7 +78,7 @@ class ReputationEvent(Base):
 
     def set_metadata(self, metadata: Dict[str, Any]):
         """Set metadata from dictionary"""
-        self.event_metadata = json.dumps(metadata)
+        setattr(self, 'event_metadata', json.dumps(metadata))
 
 
 # Wallet-related models

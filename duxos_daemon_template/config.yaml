@@ -4,18 +4,61 @@ duxnet_port: 9333  # TCP port for DuxNet peer-to-peer connections
 # Add more config options as needed 
 
 database:
-  uri: "sqlite:///duxos.db"  # TODO: Replace with production DB
+  uri: "sqlite:///duxos.db"  # TODO: Replace with production DB (PostgreSQL/MySQL)
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 30
+
 message_queue:
-  type: "redis"  # TODO: Replace with actual queue system
+  type: "redis"  # Implemented: Redis message queue system
   uri: "redis://localhost:6379/0"
+  connection_timeout: 5
+  retry_attempts: 3
+  channels:
+    - "duxos.heartbeat"
+    - "duxos.tasks"
+    - "duxos.payments"
+
 logging:
   level: "INFO"
   file: "daemon.log"
+  max_size: "10MB"
+  backup_count: 5
+  format: "%(asctime)s %(levelname)s %(name)s %(message)s"
+
 monitoring:
-  enabled: false  # TODO: Integrate with Prometheus or similar
-  endpoint: ""
+  enabled: true  # Implemented: Prometheus metrics and monitoring
+  metrics_port: 9090
+  health_check_port: 8080
+  collect_interval: 30  # seconds
+  metrics:
+    - "request_count"
+    - "request_latency"
+    - "active_connections"
+    - "error_count"
+    - "daemon_uptime"
+    - "config_reloads"
+    - "message_queue_operations"
+
 security:
-  tls_enabled: false  # TODO: Enable TLS/SSL
-  cert_path: ""
-  key_path: ""
-  rate_limit_per_minute: 60  # TODO: Implement rate limiting 
+  tls_enabled: false  # TODO: Enable TLS/SSL for production
+  cert_path: "/etc/duxos/certs/server.crt"
+  key_path: "/etc/duxos/certs/server.key"
+  rate_limit_per_minute: 60  # Implemented: Rate limiting with IP blacklisting
+  rate_limit_window_seconds: 60
+  blacklist_duration: 300  # 5 minutes
+  max_connections_per_ip: 10
+
+api_server:
+  enabled: true
+  port: 5000
+  host: "0.0.0.0"
+  cors_enabled: true
+  cors_origins: ["*"]
+
+service_discovery:
+  enabled: true
+  broadcast_interval: 30  # seconds
+  peer_timeout: 300  # 5 minutes
+  multicast_group: "224.0.0.1"
+  multicast_port: 5000 

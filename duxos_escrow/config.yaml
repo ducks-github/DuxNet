@@ -1,0 +1,118 @@
+# DuxOS Escrow System Configuration
+
+# Database configuration
+database:
+  uri: "sqlite:///duxos_escrow.db"
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 30
+
+# Escrow settings
+escrow:
+  # Distribution percentages
+  provider_percentage: 0.95  # 95% to provider
+  community_percentage: 0.05  # 5% to community fund
+  
+  # Timeouts
+  escrow_timeout_hours: 24  # Escrow expires after 24 hours
+  dispute_timeout_hours: 72  # Dispute must be resolved within 72 hours
+  
+  # Limits
+  min_amount: 0.01  # Minimum escrow amount in FLOP
+  max_amount: 1000.0  # Maximum escrow amount in FLOP
+  
+  # Auto-refund settings
+  auto_refund_enabled: true
+  auto_refund_after_hours: 24
+
+# Dispute resolution
+dispute:
+  # Evidence requirements
+  max_evidence_size_mb: 10
+  allowed_evidence_types: ["text", "image", "json", "log"]
+  
+  # Resolution settings
+  require_evidence: true
+  min_evidence_count: 1
+  max_dispute_duration_hours: 168  # 7 days
+  
+  # Arbitration
+  auto_arbitration_enabled: false
+  community_voting_enabled: true
+  min_votes_for_resolution: 3
+
+# Community fund
+community_fund:
+  # Airdrop settings
+  airdrop_threshold: 100.0  # Trigger airdrop at 100 FLOP
+  min_airdrop_amount: 10.0  # Minimum amount per airdrop
+  
+  # Governance
+  governance_enabled: true
+  min_vote_threshold: 0.1  # 10% of total supply
+  
+  # Distribution
+  distribution_interval_hours: 24  # Check for distribution every 24 hours
+
+# Security
+security:
+  # Signature requirements
+  require_provider_signature: true
+  require_payer_signature: false
+  
+  # Rate limiting
+  max_escrows_per_hour: 100
+  max_disputes_per_day: 10
+  
+  # Validation
+  strict_result_validation: true
+  require_proof_of_computation: true
+
+# Integration
+integration:
+  # Wallet service
+  wallet_service_url: "http://localhost:8000"
+  wallet_service_timeout: 30
+  
+  # Task engine
+  task_engine_url: "http://localhost:8001"
+  task_engine_timeout: 60
+  
+  # Message queue
+  message_queue_url: "redis://localhost:6379/0"
+  message_queue_channels:
+    - "duxos.escrow.created"
+    - "duxos.escrow.released"
+    - "duxos.escrow.refunded"
+    - "duxos.escrow.disputed"
+
+# Logging
+logging:
+  level: "INFO"
+  file: "/var/log/duxos/escrow.log"
+  max_size: "10MB"
+  backup_count: 5
+  format: "%(asctime)s %(levelname)s %(name)s %(message)s"
+
+# API server
+api_server:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8002
+  cors_enabled: true
+  cors_origins: ["*"]
+  
+  # Rate limiting
+  rate_limit_per_minute: 60
+  rate_limit_per_hour: 1000
+
+# Monitoring
+monitoring:
+  enabled: true
+  metrics_port: 9092
+  health_check_port: 8082
+  
+  # Metrics
+  collect_escrow_metrics: true
+  collect_dispute_metrics: true
+  collect_fund_metrics: true 

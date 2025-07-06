@@ -54,8 +54,9 @@ class NodeRepository:
         """Update node status"""
         node = self.get_node(node_id)
         if node:
-            node.status = status
-            node.updated_at = datetime.utcnow()
+            # Use setattr to avoid type checker issues with SQLAlchemy columns
+            setattr(node, 'status', status)
+            setattr(node, 'updated_at', datetime.utcnow())
             self.db.commit()
             self.db.refresh(node)
         return node
@@ -64,8 +65,8 @@ class NodeRepository:
         """Update node heartbeat timestamp"""
         node = self.get_node(node_id)
         if node:
-            node.last_heartbeat = datetime.utcnow()
-            node.status = "online"
+            setattr(node, 'last_heartbeat', datetime.utcnow())
+            setattr(node, 'status', "online")
             self.db.commit()
             self.db.refresh(node)
         return node
@@ -74,8 +75,8 @@ class NodeRepository:
         """Update node reputation"""
         node = self.get_node(node_id)
         if node:
-            node.reputation = max(0.0, min(100.0, reputation))  # Clamp between 0-100
-            node.updated_at = datetime.utcnow()
+            setattr(node, 'reputation', max(0.0, min(100.0, reputation)))  # Clamp between 0-100
+            setattr(node, 'updated_at', datetime.utcnow())
             self.db.commit()
             self.db.refresh(node)
         return node
@@ -110,8 +111,8 @@ class NodeRepository:
         """Soft delete a node (set is_active to False)"""
         node = self.get_node(node_id)
         if node:
-            node.is_active = False
-            node.updated_at = datetime.utcnow()
+            setattr(node, 'is_active', False)
+            setattr(node, 'updated_at', datetime.utcnow())
             self.db.commit()
             return True
         return False
@@ -120,7 +121,7 @@ class CapabilityRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def create_capability(self, name: str, description: str = None, version: str = "1.0") -> Capability:
+    def create_capability(self, name: str, description: Optional[str] = None, version: str = "1.0") -> Capability:
         """Create a new capability"""
         capability = Capability(
             name=name,
@@ -143,14 +144,14 @@ class CapabilityRepository:
             query = query.filter(Capability.is_active == True)
         return query.all()
 
-    def update_capability(self, name: str, description: str = None, version: str = None) -> Optional[Capability]:
+    def update_capability(self, name: str, description: Optional[str] = None, version: Optional[str] = None) -> Optional[Capability]:
         """Update a capability"""
         capability = self.get_capability(name)
         if capability:
             if description is not None:
-                capability.description = description
+                setattr(capability, 'description', description)
             if version is not None:
-                capability.version = version
+                setattr(capability, 'version', version)
             self.db.commit()
             self.db.refresh(capability)
         return capability
@@ -159,7 +160,7 @@ class CapabilityRepository:
         """Soft delete a capability"""
         capability = self.get_capability(name)
         if capability:
-            capability.is_active = False
+            setattr(capability, 'is_active', False)
             self.db.commit()
             return True
         return False
@@ -169,7 +170,7 @@ class ReputationRepository:
         self.db = db
 
     def create_reputation_event(self, node_id: str, event_type: str, score_change: float, 
-                              description: str = None, metadata: Dict[str, Any] = None) -> ReputationEvent:
+                              description: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> ReputationEvent:
         """Create a new reputation event"""
         event = ReputationEvent(
             id=str(uuid.uuid4()),
@@ -177,7 +178,7 @@ class ReputationRepository:
             event_type=event_type,
             score_change=score_change,
             description=description,
-            metadata=metadata or {}
+            event_metadata=metadata or {}
         )
         self.db.add(event)
         self.db.commit()
@@ -241,7 +242,7 @@ class WalletRepository:
         """Update wallet balance"""
         wallet = self.get_wallet_by_id(wallet_id)
         if wallet:
-            wallet.balance = balance
+            setattr(wallet, 'balance', balance)
             self.db.commit()
             self.db.refresh(wallet)
         return wallet
@@ -250,7 +251,7 @@ class WalletRepository:
         """Update wallet address"""
         wallet = self.get_wallet_by_id(wallet_id)
         if wallet:
-            wallet.address = address
+            setattr(wallet, 'address', address)
             self.db.commit()
             self.db.refresh(wallet)
         return wallet
@@ -259,7 +260,7 @@ class WalletRepository:
         """Deactivate a wallet"""
         wallet = self.get_wallet_by_id(wallet_id)
         if wallet:
-            wallet.is_active = False
+            setattr(wallet, 'is_active', False)
             self.db.commit()
             return True
         return False
@@ -316,9 +317,9 @@ class TransactionRepository:
         """Update transaction status"""
         transaction = self.get_transaction_by_txid(txid)
         if transaction:
-            transaction.status = status
+            setattr(transaction, 'status', status)
             if status == "confirmed":
-                transaction.confirmed_at = datetime.utcnow()
+                setattr(transaction, 'confirmed_at', datetime.utcnow())
             self.db.commit()
             self.db.refresh(transaction)
         return transaction
@@ -327,14 +328,16 @@ class TransactionRepository:
         """Get transaction statistics for a wallet"""
         transactions = self.db.query(Transaction).filter(Transaction.wallet_id == wallet_id).all()
         
-        total_sent = sum(tx.amount for tx in transactions if tx.transaction_type == "send")
-        total_received = sum(tx.amount for tx in transactions if tx.transaction_type == "receive")
-        total_fees = sum(tx.fee for tx in transactions)
+        # Use list comprehension with proper filtering
+        total_sent = sum(tx.amount for tx in transactions if getattr(tx, 'transaction_type') == "send")
+        total_received = sum(tx.amount for tx in transactions if getattr(tx, 'transaction_type') == "receive")
+        total_fees = sum(getattr(tx, 'fee', 0.0) for tx in transactions)
+        pending_count = len([tx for tx in transactions if getattr(tx, 'status') == "pending"])
         
         return {
             "total_transactions": len(transactions),
             "total_sent": total_sent,
             "total_received": total_received,
             "total_fees": total_fees,
-            "pending_transactions": len([tx for tx in transactions if tx.status == "pending"])
+            "pending_transactions": pending_count
         } 

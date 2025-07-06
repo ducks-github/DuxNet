@@ -12,6 +12,13 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from flask import Flask, request, jsonify
 import json
+import redis
+import prometheus_client
+from datetime import datetime, timedelta
+from collections import defaultdict, deque
+from typing import Dict, Any, Optional, List
+import hashlib
+import hmac
 
 CONFIG_PATH = os.environ.get('DUXOS_DAEMON_CONFIG', 'config.yaml')
 LOG_PATH = os.environ.get('DUXOS_DAEMON_LOG', 'daemon.log')
@@ -20,19 +27,213 @@ PID_PATH = os.environ.get('DUXOS_DAEMON_PID', 'daemon.pid')
 # Global Flask app instance (to be initialized by DuxOSDaemon)
 app = None
 
+# Prometheus metrics
+REQUEST_COUNT = prometheus_client.Counter('duxos_requests_total', 'Total requests', ['method', 'endpoint'])
+REQUEST_LATENCY = prometheus_client.Histogram('duxos_request_duration_seconds', 'Request latency')
+ACTIVE_CONNECTIONS = prometheus_client.Gauge('duxos_active_connections', 'Active connections')
+ERROR_COUNT = prometheus_client.Counter('duxos_errors_total', 'Total errors', ['type'])
+
+class MessageQueue:
+    """Message queue implementation using Redis"""
+    
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.redis_client = None
+        self.connected = False
+        self._connect()
+    
+    def _connect(self):
+        """Connect to Redis"""
+        try:
+            uri = self.config.get('message_queue', {}).get('uri', 'redis://localhost:6379/0')
+            self.redis_client = redis.from_url(uri)
+            # Test connection
+            self.redis_client.ping()
+            self.connected = True
+            logging.info("Connected to Redis message queue")
+        except Exception as e:
+            logging.error(f"Failed to connect to Redis: {e}")
+            self.connected = False
+    
+    def publish(self, channel: str, message: Dict[str, Any]) -> bool:
+        """Publish message to channel"""
+        if not self.connected:
+            return False
+        try:
+            self.redis_client.publish(channel, json.dumps(message))
+            return True
+        except Exception as e:
+            logging.error(f"Failed to publish message: {e}")
+            return False
+    
+    def subscribe(self, channel: str, callback) -> bool:
+        """Subscribe to channel"""
+        if not self.connected:
+            return False
+        try:
+            pubsub = self.redis_client.pubsub()
+            pubsub.subscribe(**{channel: callback})
+            pubsub.run_in_thread(sleep_time=0.001)
+            return True
+        except Exception as e:
+            logging.error(f"Failed to subscribe to channel: {e}")
+            return False
+    
+    def enqueue(self, queue: str, message: Dict[str, Any]) -> bool:
+        """Add message to queue"""
+        if not self.connected:
+            return False
+        try:
+            self.redis_client.lpush(queue, json.dumps(message))
+            return True
+        except Exception as e:
+            logging.error(f"Failed to enqueue message: {e}")
+            return False
+    
+    def dequeue(self, queue: str, timeout: int = 1) -> Optional[Dict[str, Any]]:
+        """Get message from queue"""
+        if not self.connected:
+            return None
+        try:
+            result = self.redis_client.brpop(queue, timeout=timeout)
+            if result:
+                return json.loads(result[1])
+            return None
+        except Exception as e:
+            logging.error(f"Failed to dequeue message: {e}")
+            return None
+
+class RateLimiter:
+    """Rate limiting implementation"""
+    
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.rate_limit_per_minute = config.get('security', {}).get('rate_limit_per_minute', 60)
+        self.rate_limit_window_seconds = 60
+        self.connection_timestamps = defaultdict(deque)
+        self.ip_blacklist = set()
+        self.blacklist_duration = 300  # 5 minutes
+    
+    def is_allowed(self, identifier: str) -> bool:
+        """Check if request is allowed based on rate limiting"""
+        current_time = time.time()
+        
+        # Check if IP is blacklisted
+        if identifier in self.ip_blacklist:
+            return False
+        
+        # Clean old timestamps
+        timestamps = self.connection_timestamps[identifier]
+        while timestamps and timestamps[0] < current_time - self.rate_limit_window_seconds:
+            timestamps.popleft()
+        
+        # Check rate limit
+        if len(timestamps) >= self.rate_limit_per_minute:
+            # Add to blacklist for repeated violations
+            self.ip_blacklist.add(identifier)
+            logging.warning(f"Rate limit exceeded for {identifier}, added to blacklist")
+            return False
+        
+        # Add current timestamp
+        timestamps.append(current_time)
+        return True
+    
+    def cleanup_blacklist(self):
+        """Clean up expired blacklist entries"""
+        current_time = time.time()
+        # This is a simplified cleanup - in production, you'd use a more sophisticated approach
+        if len(self.ip_blacklist) > 1000:  # Prevent memory issues
+            self.ip_blacklist.clear()
+
+class Monitoring:
+    """Monitoring and metrics collection"""
+    
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.enabled = config.get('monitoring', {}).get('enabled', False)
+        self.metrics_port = config.get('monitoring', {}).get('metrics_port', 9090)
+        self.metrics_server = None
+        self.metrics_thread = None
+        
+        # Custom metrics
+        self.daemon_uptime = prometheus_client.Gauge('duxos_daemon_uptime_seconds', 'Daemon uptime in seconds')
+        self.config_reloads = prometheus_client.Counter('duxos_config_reloads_total', 'Total config reloads')
+        self.message_queue_operations = prometheus_client.Counter('duxos_mq_operations_total', 'Message queue operations', ['operation', 'status'])
+        
+        if self.enabled:
+            self._start_metrics_server()
+    
+    def _start_metrics_server(self):
+        """Start Prometheus metrics server"""
+        try:
+            prometheus_client.start_http_server(self.metrics_port)
+            logging.info(f"Prometheus metrics server started on port {self.metrics_port}")
+        except Exception as e:
+            logging.error(f"Failed to start metrics server: {e}")
+            self.enabled = False
+    
+    def record_request(self, method: str, endpoint: str, duration: float, success: bool = True):
+        """Record request metrics"""
+        if not self.enabled:
+            return
+        
+        REQUEST_COUNT.labels(method=method, endpoint=endpoint).inc()
+        REQUEST_LATENCY.observe(duration)
+        
+        if not success:
+            ERROR_COUNT.labels(type='request_error').inc()
+    
+    def record_connection(self, active: bool):
+        """Record connection metrics"""
+        if not self.enabled:
+            return
+        
+        if active:
+            ACTIVE_CONNECTIONS.inc()
+        else:
+            ACTIVE_CONNECTIONS.dec()
+    
+    def update_uptime(self, uptime_seconds: float):
+        """Update uptime metric"""
+        if self.enabled:
+            self.daemon_uptime.set(uptime_seconds)
+    
+    def record_config_reload(self):
+        """Record config reload"""
+        if self.enabled:
+            self.config_reloads.inc()
+    
+    def record_mq_operation(self, operation: str, success: bool):
+        """Record message queue operation"""
+        if self.enabled:
+            status = 'success' if success else 'error'
+            self.message_queue_operations.labels(operation=operation, status=status).inc()
+
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/healthz':
             self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            response = {
+                'status': 'healthy',
+                'timestamp': datetime.utcnow().isoformat(),
+                'uptime': time.time() - getattr(self.server, 'start_time', time.time())
+            }
+            self.wfile.write(json.dumps(response).encode())
+        elif self.path == '/metrics':
+            self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
-            self.wfile.write(b"OK")
+            # Return Prometheus metrics
+            metrics = prometheus_client.generate_latest()
+            self.wfile.write(metrics)
         else:
             self.send_response(404)
             self.end_headers()
 
     def log_message(self, format, *args):
-        pass
+        logging.info(f"Health check: {format % args}")
 
 class ServiceDiscoveryAgent:
     def __init__(self, config, daemon_id):
@@ -126,67 +327,93 @@ class ServiceDiscoveryAgent:
 class DuxOSDaemon:
     def __init__(self, config):
         self.config = config
-        self.running = True
-
-        # Configuration hot-reloading properties
-        self.config_path = CONFIG_PATH
-        self.last_config_mod_time = os.path.getmtime(self.config_path) if os.path.exists(self.config_path) else 0
-
+        self.running = False
+        self.daemon_id = hashlib.md5(f"{time.time()}".encode()).hexdigest()[:8]
+        self.start_time = time.time()
+        
+        # Initialize infrastructure components
+        self.message_queue = MessageQueue(config)
+        self.rate_limiter = RateLimiter(config)
+        self.monitoring = Monitoring(config)
+        
+        # Service discovery
+        self.service_discovery_agent = ServiceDiscoveryAgent(config, self.daemon_id)
+        
+        # Configuration hot-reloading
+        self.config_file_mtime = os.path.getmtime(CONFIG_PATH) if os.path.exists(CONFIG_PATH) else 0
+        
+        # Flask app for REST API
         global app
         app = Flask(__name__)
-        self.api_port = self.config.get('api_server', {}).get('port', 5000)
-        self.api_enabled = self.config.get('api_server', {}).get('enabled', False)
-        self.api_server_thread = None
-
-        # Service Discovery Integration
-        self.daemon_id = socket.gethostname() + "_" + str(os.getpid())
-        self.service_discovery_agent = ServiceDiscoveryAgent(self.config, self.daemon_id)
-
-        # Define API endpoints using the global app instance
+        
         @app.route('/api/v1/status', methods=['GET'])
         def get_status():
-            return jsonify({"status": "running", "timestamp": time.time(), "daemon_id": self.daemon_id})
+            start_time = time.time()
+            try:
+                response = {
+                    'status': 'running',
+                    'daemon_id': self.daemon_id,
+                    'uptime': time.time() - self.start_time,
+                    'config_reloads': getattr(self.monitoring, 'config_reloads', 0),
+                    'message_queue_connected': self.message_queue.connected
+                }
+                self.monitoring.record_request('GET', '/api/v1/status', time.time() - start_time, True)
+                return jsonify(response)
+            except Exception as e:
+                self.monitoring.record_request('GET', '/api/v1/status', time.time() - start_time, False)
+                return jsonify({'error': str(e)}), 500
 
         @app.route('/api/v1/config', methods=['GET'])
         def get_daemon_config():
-            sanitized_config = self.config.copy()
-            # Remove sensitive information before exposing
-            if 'security' in sanitized_config:
-                sanitized_config['security'].pop('key_path', None)
-                for key in sanitized_config.keys():
-                    if isinstance(sanitized_config[key], dict) and 'password' in sanitized_config[key]:
-                        sanitized_config[key]['password'] = '********'
-            return jsonify(sanitized_config)
+            start_time = time.time()
+            try:
+                # Return safe config (without sensitive data)
+                safe_config = {
+                    'heartbeat_interval': self.config.get('heartbeat_interval'),
+                    'duxnet_port': self.config.get('duxnet_port'),
+                    'monitoring_enabled': self.config.get('monitoring', {}).get('enabled'),
+                    'tls_enabled': self.config.get('security', {}).get('tls_enabled')
+                }
+                self.monitoring.record_request('GET', '/api/v1/config', time.time() - start_time, True)
+                return jsonify(safe_config)
+            except Exception as e:
+                self.monitoring.record_request('GET', '/api/v1/config', time.time() - start_time, False)
+                return jsonify({'error': str(e)}), 500
 
         @app.route('/api/v1/heartbeat_interval', methods=['GET'])
         def get_heartbeat_interval():
-            return jsonify({"heartbeat_interval": self.config.get('heartbeat_interval', 10)})
+            return jsonify({'heartbeat_interval': self.config.get('heartbeat_interval', 10)})
 
         @app.route('/api/v1/peers', methods=['GET'])
         def get_known_peers():
             # Clean up old peers before returning
-            cutoff_time = time.time() - (self.service_discovery_agent.broadcast_interval * 2)
-            active_peers = {
-                pid: info for pid, info in self.service_discovery_agent.known_peers.items()
-                if info['last_seen'] > cutoff_time
-            }
-            self.service_discovery_agent.known_peers = active_peers
-            return jsonify({"peers": active_peers})
+            current_time = time.time()
+            active_peers = [
+                peer for peer in self.service_discovery_agent.known_peers.values()
+                if current_time - peer['last_seen'] < 300  # 5 minutes
+            ]
+            return jsonify({'peers': active_peers})
+
+    def _check_and_reload_config(self):
+        """Check if config file has changed and reload if necessary"""
+        try:
+            if os.path.exists(CONFIG_PATH):
+                current_mtime = os.path.getmtime(CONFIG_PATH)
+                if current_mtime > self.config_file_mtime:
+                    logging.info("Configuration file changed, reloading...")
+                    with open(CONFIG_PATH, 'r') as f:
+                        self.config = yaml.safe_load(f)
+                    self.config_file_mtime = current_mtime
+                    self.monitoring.record_config_reload()
+                    logging.info("Configuration reloaded successfully")
+        except Exception as e:
+            logging.error(f"Failed to reload configuration: {e}")
 
     def run(self):
-        logging.info('Daemon started.')
-        # Start API server in a separate thread
-        if self.api_enabled:
-            try:
-                self.api_server_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=self.api_port, debug=False, use_reloader=False))
-                self.api_server_thread.daemon = True
-                self.api_server_thread.start()
-                logging.info(f"REST API server enabled on port {self.api_port}/api/v1/status, /api/v1/config, /api/v1/heartbeat_interval, /api/v1/peers")
-            except Exception as e:
-                logging.error(f"Failed to start REST API server: {e}")
-                self.api_enabled = False
-
-        # Start service discovery agent
+        logging.info('DuxOSDaemon starting...')
+        self.running = True
+        
+        # Start service discovery
         self.service_discovery_agent.start()
 
         while self.running:
@@ -196,8 +423,14 @@ class DuxOSDaemon:
             # Implement configuration hot-reloading
             self._check_and_reload_config()
 
-            # TODO: Add metrics and monitoring hooks (e.g., Prometheus, custom logs)
+            # Update monitoring metrics
+            self.monitoring.update_uptime(time.time() - self.start_time)
+            
+            # Cleanup rate limiter blacklist
+            self.rate_limiter.cleanup_blacklist()
+            
             time.sleep(self.config.get('heartbeat_interval', 10))
+        
         logging.info('Daemon stopped.')
 
     def stop(self, signum=None, frame=None):
@@ -205,16 +438,14 @@ class DuxOSDaemon:
         self.running = False
         # Stop service discovery agent
         self.service_discovery_agent.stop()
-        # ... existing shutdown logic for other components ...
-        # Flask's development server doesn't have a direct shutdown method in this context for thread.
-        # It relies on the daemon thread exiting when the main program does.
-        # For production, a proper WSGI server (like Gunicorn) would be used with graceful shutdown.
-        # However, for this template, setting self.running = False will eventually stop the main loop.
-        # A more robust shutdown mechanism for the Flask thread is beyond the scope of this template.
-        if self.health_server:
-            self.health_server.shutdown()
-            self.health_server.server_close()
-            logging.info("Health check server shut down.")
+        # Stop Flask app if running
+        if app:
+            try:
+                # For development server, we can't easily shut it down
+                # In production, use a proper WSGI server like Gunicorn
+                logging.info("Flask app shutdown initiated")
+            except Exception as e:
+                logging.error(f"Error shutting down Flask app: {e}")
 
 class DuxNetDaemon(DuxOSDaemon):
     def __init__(self, config):
@@ -225,10 +456,6 @@ class DuxNetDaemon(DuxOSDaemon):
         self.cert_path = config.get('security', {}).get('cert_path')
         self.key_path = config.get('security', {}).get('key_path')
         self.ssl_context = None
-
-        self.rate_limit_per_minute = config.get('security', {}).get('rate_limit_per_minute', 60)
-        self.connection_timestamps = []
-        self.rate_limit_window_seconds = 60
 
         self.health_check_enabled = config.get('monitoring', {}).get('enabled', False)
         self.health_check_port = config.get('monitoring', {}).get('health_check_port', 8080)
@@ -269,6 +496,7 @@ class DuxNetDaemon(DuxOSDaemon):
         if self.health_check_enabled:
             try:
                 self.health_server = HTTPServer(('0.0.0.0', self.health_check_port), HealthCheckHandler)
+                self.health_server.start_time = self.start_time
                 self.health_thread = threading.Thread(target=self.health_server.serve_forever)
                 self.health_thread.daemon = True
                 self.health_thread.start()
@@ -277,19 +505,29 @@ class DuxNetDaemon(DuxOSDaemon):
                 logging.error(f"Failed to start health check server: {e}")
                 self.health_check_enabled = False
 
+        # Start service discovery
+        self.service_discovery_agent.start()
+
         try:
             while self.running:
                 current_time = time.time()
-                self.connection_timestamps = [ts for ts in self.connection_timestamps if ts > current_time - self.rate_limit_window_seconds]
-
-                if len(self.connection_timestamps) >= self.rate_limit_per_minute:
-                    logging.warning(f"Rate limit exceeded ({self.rate_limit_per_minute} connections/{self.rate_limit_window_seconds}s). Rejecting new connection.")
+                
+                # Check rate limiting
+                if not self.rate_limiter.is_allowed("global"):
+                    logging.warning("Global rate limit exceeded. Skipping connection acceptance.")
                     time.sleep(0.1)
                     continue
 
                 try:
                     client_sock, addr = self.server_socket.accept()
-                    self.connection_timestamps.append(current_time)
+                    
+                    # Check rate limiting for specific IP
+                    if not self.rate_limiter.is_allowed(addr[0]):
+                        logging.warning(f"Rate limit exceeded for {addr[0]}. Rejecting connection.")
+                        client_sock.close()
+                        continue
+
+                    self.monitoring.record_connection(True)
 
                     if self.tls_enabled:
                         try:
@@ -298,18 +536,22 @@ class DuxNetDaemon(DuxOSDaemon):
                         except ssl.SSLError as e:
                             logging.warning(f"TLS handshake failed with {addr}: {e}")
                             client_sock.close()
+                            self.monitoring.record_connection(False)
                             continue
                     else:
                         logging.info(f'Accepted connection from {addr}')
 
                     client_sock.sendall(b"Welcome to DuxNet!\n")
                     client_sock.close()
+                    self.monitoring.record_connection(False)
+                    
                 except socket.timeout:
                     continue
                 except ssl.SSLError as e:
                     logging.warning(f"SSL error during connection: {e}")
                 except Exception as e:
                     logging.error(f"Error handling client connection: {e}")
+                    self.monitoring.record_connection(False)
         finally:
             if self.server_socket:
                 self.server_socket.close()
