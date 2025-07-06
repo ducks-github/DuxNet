@@ -1,6 +1,8 @@
 # Dux_OS
 🐧 Dux OS is a decentralized, Debian-based Linux distribution for collaborative computing. Nodes share real-world computational tasks and monetize API/app usage using Flop Coin — a built-in digital currency.
 
+(this project was vibe coded but does not mean it will not have non vibe coded parts in the future)
+
 ## 🏗️ Modular Architecture
 
 Dux_OS is built on a modular architecture that enables distributed computing, secure payments, and decentralized services. Each module operates independently but integrates seamlessly through standardized interfaces.
