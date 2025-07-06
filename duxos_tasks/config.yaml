@@ -1,0 +1,85 @@
+# Task Engine Configuration
+
+# Engine settings
+engine:
+  max_concurrent_tasks: 10
+  scheduling_interval: 5.0  # seconds
+  result_verification: true
+  automatic_payments: true
+  enable_logging: true
+  log_level: "INFO"
+
+# Sandbox configuration
+sandbox:
+  runtime: "docker"  # docker, native, container
+  memory_limit_mb: 512
+  cpu_limit: 1.0
+  timeout_seconds: 300
+  network_access: false
+  base_image: "python:3.9-slim"
+  working_dir: "/app"
+  allowed_commands:
+    - "python"
+    - "node"
+    - "bash"
+
+# Scheduler configuration
+scheduler:
+  max_retries: 3
+  enable_load_balancing: true
+  enable_reputation_weighting: true
+  max_tasks_per_node: 10
+  assignment_timeout: 300  # seconds
+
+# API configuration
+api:
+  host: "0.0.0.0"
+  port: 8001
+  enable_cors: true
+  rate_limit_enabled: true
+  rate_limit_requests: 100
+  rate_limit_window: 60  # seconds
+
+# External service connections
+services:
+  registry:
+    url: "http://localhost:8000"
+    timeout: 30
+    retry_attempts: 3
+  
+  escrow:
+    url: "http://localhost:8002"
+    timeout: 30
+    retry_attempts: 3
+  
+  wallet:
+    url: "http://localhost:8003"
+    timeout: 30
+    retry_attempts: 3
+
+# Security settings
+security:
+  enable_signature_verification: true
+  enable_result_encryption: false
+  allowed_task_types:
+    - "api_call"
+    - "batch_processing"
+    - "machine_learning"
+    - "data_analysis"
+    - "image_processing"
+    - "custom"
+
+# Monitoring and metrics
+monitoring:
+  enable_metrics: true
+  metrics_port: 9090
+  enable_health_checks: true
+  health_check_interval: 30  # seconds
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "/var/log/duxos/task_engine.log"
+  max_size: "10MB"
+  backup_count: 5 

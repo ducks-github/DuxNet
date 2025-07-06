@@ -12,18 +12,26 @@ from sqlalchemy.orm import Session
 from .models import Escrow, EscrowStatus, EscrowTransaction, CommunityFund
 from .transaction_validator import TransactionValidator
 from .dispute_resolver import DisputeResolver
+from .wallet_integration import EscrowWalletIntegration, EscrowTransactionSigner
+from .community_fund_manager import CommunityFundManager
 
 logger = logging.getLogger(__name__)
 
 class EscrowManager:
     """Manages escrow contracts and fund distribution"""
     
-    def __init__(self, db: Session, wallet_service=None, message_queue=None):
+    def __init__(self, db: Session, wallet_service=None, message_queue=None, config=None):
         self.db = db
         self.wallet_service = wallet_service
         self.message_queue = message_queue
+        self.config = config or {}
+        
+        # Initialize services
         self.validator = TransactionValidator(db)
         self.dispute_resolver = DisputeResolver(db)
+        self.wallet_integration = EscrowWalletIntegration(db, config)
+        self.transaction_signer = EscrowTransactionSigner()
+        self.community_fund_manager = CommunityFundManager(db, self.wallet_integration, config)
         
         # Initialize community fund if it doesn't exist
         self._ensure_community_fund()
@@ -73,20 +81,23 @@ class EscrowManager:
         # Calculate distribution amounts
         escrow.calculate_distribution()
         
-        # Lock funds from payer
-        if self.wallet_service:
-            try:
-                # Lock funds (this would be implemented in wallet service)
-                lock_success = self._lock_funds(payer_wallet_id, amount, escrow_id)
-                if not lock_success:
-                    raise Exception("Failed to lock funds")
-                
+        # Lock funds from payer using real wallet integration
+        try:
+            lock_success = self.wallet_integration.lock_funds(
+                wallet_id=payer_wallet_id,
+                amount=amount,
+                escrow_id=escrow_id
+            )
+            
+            if lock_success:
                 setattr(escrow, 'status', EscrowStatus.ACTIVE)
                 logger.info(f"Funds locked for escrow {escrow_id}")
+            else:
+                raise Exception("Failed to lock funds")
                 
-            except Exception as e:
-                logger.error(f"Failed to lock funds: {e}")
-                raise
+        except Exception as e:
+            logger.error(f"Failed to lock funds: {e}")
+            raise
         
         # Save to database
         self.db.add(escrow)
@@ -128,23 +139,31 @@ class EscrowManager:
         if not self.validator.validate_result(escrow, result_hash, provider_signature):
             raise ValueError("Result validation failed")
         
-        # Release funds to provider (95%)
+        # Release funds to provider (95%) using real wallet integration
         provider_amount = escrow.provider_amount
-        if self.wallet_service and provider_amount is not None:
+        if provider_amount is not None:
             provider_wallet_id = escrow.provider_wallet_id
-            provider_success = self._transfer_funds(
-                from_wallet_id=None,  # From escrow
-                to_wallet_id=provider_wallet_id,
-                amount=provider_amount,
-                escrow_id=escrow_id
-            )
-            if not provider_success:
+            try:
+                txid = self.wallet_integration.transfer_funds(
+                    from_wallet_id=None,  # From escrow
+                    to_wallet_id=provider_wallet_id,
+                    amount=provider_amount,
+                    escrow_id=escrow_id
+                )
+                logger.info(f"Transferred {provider_amount} FLOP to provider, txid: {txid}")
+            except Exception as e:
+                logger.error(f"Failed to transfer funds to provider: {e}")
                 raise Exception("Failed to transfer funds to provider")
         
-        # Add to community fund (5%)
+        # Add to community fund (5%) using community fund manager
         community_amount = escrow.community_amount
         if community_amount is not None:
-            self._add_to_community_fund(community_amount)
+            try:
+                txid = self.community_fund_manager.collect_tax(escrow_id, community_amount)
+                logger.info(f"Collected {community_amount} FLOP tax for community fund, txid: {txid}")
+            except Exception as e:
+                logger.error(f"Failed to collect community fund tax: {e}")
+                raise Exception("Failed to collect community fund tax")
         
         # Update escrow status
         escrow.status = EscrowStatus.RELEASED  # type: ignore
@@ -193,16 +212,22 @@ class EscrowManager:
         if escrow.status not in [EscrowStatus.ACTIVE, EscrowStatus.DISPUTED]:
             raise ValueError(f"Escrow {escrow_id} cannot be refunded (status: {escrow.status})")
         
-        # Refund funds to payer
-        if self.wallet_service:
-            refund_success = self._transfer_funds(
+        # Refund funds to payer using real wallet integration
+        try:
+            # First unlock the funds
+            self.wallet_integration.unlock_funds(escrow_id)
+            
+            # Then transfer back to payer
+            txid = self.wallet_integration.transfer_funds(
                 from_wallet_id=None,  # From escrow
                 to_wallet_id=escrow.payer_wallet_id,
                 amount=escrow.amount,
                 escrow_id=escrow_id
             )
-            if not refund_success:
-                raise Exception("Failed to refund funds")
+            logger.info(f"Refunded {escrow.amount} FLOP to payer, txid: {txid}")
+        except Exception as e:
+            logger.error(f"Failed to refund funds: {e}")
+            raise Exception("Failed to refund funds")
         
         # Update escrow status
         escrow.status = EscrowStatus.REFUNDED  # type: ignore
@@ -251,29 +276,18 @@ class EscrowManager:
         fund = self.db.query(CommunityFund).first()
         return fund.balance if fund else 0.0
     
-    def _lock_funds(self, wallet_id: int, amount: float, escrow_id: str) -> bool:
-        """Lock funds in wallet (placeholder for wallet service integration)"""
-        # This would integrate with the wallet service to lock funds
-        # For now, we'll assume success
-        logger.info(f"Locking {amount} FLOP from wallet {wallet_id} for escrow {escrow_id}")
-        return True
+    def get_locked_funds_info(self, escrow_id: str) -> Optional[Dict[str, Any]]:
+        """Get information about locked funds for an escrow"""
+        return self.wallet_integration.get_locked_funds_info(escrow_id)
     
-    def _transfer_funds(self, from_wallet_id: Optional[int], to_wallet_id: int, 
-                       amount: float, escrow_id: str) -> bool:
-        """Transfer funds between wallets (placeholder for wallet service integration)"""
-        # This would integrate with the wallet service to transfer funds
-        # For now, we'll assume success
-        logger.info(f"Transferring {amount} FLOP to wallet {to_wallet_id} from escrow {escrow_id}")
-        return True
+    def get_total_locked_funds(self) -> float:
+        """Get total amount of locked funds across all escrows"""
+        return self.wallet_integration.get_total_locked_funds()
     
-    def _add_to_community_fund(self, amount: float):
-        """Add amount to community fund"""
-        fund = self.db.query(CommunityFund).first()
-        if fund:
-            fund.balance += amount
-            fund.updated_at = datetime.now(timezone.utc)  # type: ignore
-            self.db.commit()
-            logger.info(f"Added {amount} FLOP to community fund (new balance: {fund.balance})")
+    def validate_transaction_signature(self, escrow: Escrow, signature: str, 
+                                     message: str, node_id: str) -> bool:
+        """Validate transaction signature"""
+        return self.wallet_integration.validate_transaction_signature(escrow, signature, message, node_id)
     
     def _record_transaction(self, escrow_id: str, transaction_type: str, amount: float,
                           from_wallet_id: Optional[int] = None, to_wallet_id: Optional[int] = None,

@@ -1,29 +1,108 @@
 # DuxOS Escrow System Configuration
 
-# Database configuration
+# Flopcoin RPC Configuration
+rpc:
+  host: "127.0.0.1"
+  port: 32553
+  user: "flopcoinrpc"
+  password: "your_secure_password"
+  timeout: 30
+  retry_attempts: 3
+  retry_delay: 1
+
+# Wallet Integration Settings
+wallet:
+  max_transaction_amount: 10000.0
+  min_transaction_amount: 0.001
+  default_fee: 0.001
+  max_fee: 0.01
+  min_fee: 0.0001
+  rate_limit_window: 3600  # 1 hour
+  max_transactions_per_window: 100
+  community_fund_address: "FLOPcommunityfund123"
+
+# Community Fund Configuration
+community_fund:
+  airdrop_threshold: 100.0  # Trigger airdrop at 100 FLOP
+  min_airdrop_amount: 1.0   # Minimum 1 FLOP per node
+  airdrop_interval_hours: 24  # Daily airdrops
+  max_airdrop_nodes: 1000   # Maximum nodes per airdrop
+  governance_enabled: true
+  min_vote_threshold: 0.1   # 10% of total supply for governance
+
+# Escrow Settings
+escrow:
+  default_timeout_hours: 24
+  max_escrow_amount: 50000.0
+  min_escrow_amount: 0.1
+  auto_refund_after_hours: 168  # 7 days
+  require_signature: true
+  signature_timeout_minutes: 5
+
+# Transaction Validation
+validation:
+  require_result_hash: true
+  require_provider_signature: true
+  require_payer_signature: false
+  max_result_size_bytes: 1048576  # 1MB
+  allowed_service_types:
+    - "image_processing"
+    - "text_processing"
+    - "data_analysis"
+    - "machine_learning"
+    - "api_service"
+    - "computation"
+
+# Security Settings
+security:
+  enable_rate_limiting: true
+  max_requests_per_minute: 60
+  enable_audit_logging: true
+  audit_log_level: "INFO"
+  require_authentication: true
+  session_timeout_minutes: 30
+
+# Database Configuration
 database:
-  uri: "sqlite:///duxos_escrow.db"
+  connection_string: "sqlite:///duxos_escrow.db"
   pool_size: 10
   max_overflow: 20
   pool_timeout: 30
+  pool_recycle: 3600
 
-# Escrow settings
-escrow:
-  # Distribution percentages
-  provider_percentage: 0.95  # 95% to provider
-  community_percentage: 0.05  # 5% to community fund
-  
-  # Timeouts
-  escrow_timeout_hours: 24  # Escrow expires after 24 hours
-  dispute_timeout_hours: 72  # Dispute must be resolved within 72 hours
-  
-  # Limits
-  min_amount: 0.01  # Minimum escrow amount in FLOP
-  max_amount: 1000.0  # Maximum escrow amount in FLOP
-  
-  # Auto-refund settings
-  auto_refund_enabled: true
-  auto_refund_after_hours: 24
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "/var/log/duxos/escrow.log"
+  max_file_size: 10485760  # 10MB
+  backup_count: 5
+
+# Monitoring and Metrics
+monitoring:
+  enable_metrics: true
+  metrics_port: 9090
+  health_check_interval: 60
+  alert_thresholds:
+    failed_transactions: 0.05  # 5%
+    high_latency_ms: 5000
+    low_balance_flop: 100
+
+# Integration Settings
+integration:
+  node_registry_url: "http://localhost:8000"
+  task_engine_url: "http://localhost:8001"
+  store_api_url: "http://localhost:8002"
+  enable_webhooks: true
+  webhook_timeout: 10
+  webhook_retry_attempts: 3
+
+# Development Settings (for testing)
+development:
+  enable_mock_wallet: false
+  enable_mock_validation: false
+  test_mode: false
+  debug_mode: false
 
 # Dispute resolution
 dispute:
@@ -41,58 +120,44 @@ dispute:
   community_voting_enabled: true
   min_votes_for_resolution: 3
 
-# Community fund
-community_fund:
-  # Airdrop settings
-  airdrop_threshold: 100.0  # Trigger airdrop at 100 FLOP
-  min_airdrop_amount: 10.0  # Minimum amount per airdrop
-  
-  # Governance
-  governance_enabled: true
-  min_vote_threshold: 0.1  # 10% of total supply
-  
-  # Distribution
-  distribution_interval_hours: 24  # Check for distribution every 24 hours
+# Distribution percentages
+provider_percentage: 0.95  # 95% to provider
+community_percentage: 0.05  # 5% to community fund
 
-# Security
-security:
-  # Signature requirements
-  require_provider_signature: true
-  require_payer_signature: false
-  
-  # Rate limiting
-  max_escrows_per_hour: 100
-  max_disputes_per_day: 10
-  
-  # Validation
-  strict_result_validation: true
-  require_proof_of_computation: true
+# Timeouts
+escrow_timeout_hours: 24  # Escrow expires after 24 hours
+dispute_timeout_hours: 72  # Dispute must be resolved within 72 hours
 
-# Integration
-integration:
-  # Wallet service
-  wallet_service_url: "http://localhost:8000"
-  wallet_service_timeout: 30
-  
-  # Task engine
-  task_engine_url: "http://localhost:8001"
-  task_engine_timeout: 60
-  
-  # Message queue
-  message_queue_url: "redis://localhost:6379/0"
-  message_queue_channels:
-    - "duxos.escrow.created"
-    - "duxos.escrow.released"
-    - "duxos.escrow.refunded"
-    - "duxos.escrow.disputed"
+# Limits
+min_amount: 0.01  # Minimum escrow amount in FLOP
+max_amount: 1000.0  # Maximum escrow amount in FLOP
 
-# Logging
-logging:
-  level: "INFO"
-  file: "/var/log/duxos/escrow.log"
-  max_size: "10MB"
-  backup_count: 5
-  format: "%(asctime)s %(levelname)s %(name)s %(message)s"
+# Auto-refund settings
+auto_refund_enabled: true
+
+# Rate limiting
+max_escrows_per_hour: 100
+max_disputes_per_day: 10
+
+# Validation
+strict_result_validation: true
+require_proof_of_computation: true
+
+# Wallet service
+wallet_service_url: "http://localhost:8000"
+wallet_service_timeout: 30
+
+# Task engine
+task_engine_url: "http://localhost:8001"
+task_engine_timeout: 60
+
+# Message queue
+message_queue_url: "redis://localhost:6379/0"
+message_queue_channels:
+  - "duxos.escrow.created"
+  - "duxos.escrow.released"
+  - "duxos.escrow.refunded"
+  - "duxos.escrow.disputed"
 
 # API server
 api_server:
@@ -105,6 +170,9 @@ api_server:
   # Rate limiting
   rate_limit_per_minute: 60
   rate_limit_per_hour: 1000
+
+# Distribution
+distribution_interval_hours: 24  # Check for distribution every 24 hours
 
 # Monitoring
 monitoring:

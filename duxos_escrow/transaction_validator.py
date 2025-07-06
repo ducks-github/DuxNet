@@ -4,10 +4,18 @@ Transaction Validator for DuxOS Escrow System
 
 import hashlib
 import logging
+import json
+import time
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 
 from .models import Escrow
+
+# Import authentication service for real signature validation
+try:
+    from duxos_registry.services.auth_service import NodeAuthService
+except ImportError:
+    NodeAuthService = None
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +24,7 @@ class TransactionValidator:
     
     def __init__(self, db: Session):
         self.db = db
+        self.auth_service = NodeAuthService() if NodeAuthService else None
     
     def validate_result(self, escrow: Escrow, result_hash: str, provider_signature: str) -> bool:
         """Validate task result and provider signature"""
@@ -52,18 +61,41 @@ class TransactionValidator:
             return False
     
     def _validate_signature(self, escrow: Escrow, signature: str) -> bool:
-        """Validate provider signature"""
-        # This would integrate with the authentication system
-        # For now, we'll do basic format validation
+        """Validate provider signature using real authentication service"""
         try:
-            # Basic signature format validation
-            if not signature or len(signature) < 64:
+            if not self.auth_service:
+                logger.warning("Authentication service not available, using basic validation")
+                # Fallback to basic format validation
+                if not signature or len(signature) < 64:
+                    return False
+                return True
+            
+            # Get provider node ID from escrow metadata
+            metadata = escrow.get_metadata()
+            provider_node_id = metadata.get('provider_node_id')
+            
+            if not provider_node_id:
+                logger.warning(f"No provider node ID found in escrow {escrow.id}")
                 return False
             
-            # In a real implementation, this would verify the signature
-            # against the provider's public key
-            logger.info(f"Signature validation placeholder for escrow {escrow.id}")
-            return True
+            # Create message that should have been signed
+            message_data = {
+                'escrow_id': escrow.id,
+                'result_hash': escrow.result_hash,
+                'amount': escrow.amount,
+                'timestamp': int(time.time())
+            }
+            message = json.dumps(message_data, sort_keys=True)
+            
+            # Verify signature using authentication service
+            is_valid = self.auth_service.verify_node_signature(provider_node_id, message, signature)
+            
+            if is_valid:
+                logger.info(f"Signature validated for escrow {escrow.id}")
+            else:
+                logger.warning(f"Invalid signature for escrow {escrow.id}")
+            
+            return is_valid
             
         except Exception as e:
             logger.error(f"Error validating signature: {e}")

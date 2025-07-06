@@ -1,213 +1,396 @@
 """
 Community Fund Manager for DuxOS Escrow System
 
-Handles:
-- Community fund balance management
-- Airdrop distribution
-- Governance voting
-- Fund allocation decisions
+This module manages the community fund, including:
+- 5% tax collection from escrow transactions
+- Automatic distribution when threshold is reached
+- Fund monitoring and reporting
+- Airdrop coordination
 """
 
 import logging
-import uuid
-from datetime import datetime, timezone
+import asyncio
+import time
 from typing import Dict, Any, Optional, List
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, func
 
-from .models import CommunityFund, Escrow
-from .exceptions import CommunityFundError
+from .models import CommunityFund, Escrow, EscrowTransaction
+from .wallet_integration import EscrowWalletIntegration
+from .exceptions import CommunityFundError, InsufficientCommunityFundError, AirdropError
 
 logger = logging.getLogger(__name__)
 
+
 class CommunityFundManager:
-    """Manages community fund operations including airdrops and governance"""
+    """Manages community fund operations and airdrops"""
     
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, wallet_integration: EscrowWalletIntegration, config: Optional[Dict[str, Any]] = None):
         self.db = db
-        self._ensure_fund_exists()
+        self.wallet_integration = wallet_integration
+        self.config = config or {}
+        
+        # Configuration
+        self.airdrop_threshold = self.config.get('airdrop_threshold', 100.0)  # 100 FLOP
+        self.min_airdrop_amount = self.config.get('min_airdrop_amount', 1.0)  # 1 FLOP per node
+        self.airdrop_interval_hours = self.config.get('airdrop_interval_hours', 24)  # Daily airdrops
+        self.max_airdrop_nodes = self.config.get('max_airdrop_nodes', 1000)  # Max nodes per airdrop
+        
+        # State tracking
+        self.last_airdrop_check = datetime.now(timezone.utc)
+        self.airdrop_in_progress = False
+        
+        # Initialize community fund if it doesn't exist
+        self._ensure_community_fund()
+        
+        logger.info("Community Fund Manager initialized")
     
-    def _ensure_fund_exists(self) -> None:
-        """Ensure community fund exists, create if it doesn't"""
-        fund = self.db.query(CommunityFund).first()
-        if not fund:
-            fund = CommunityFund(
-                balance=0.0,
-                airdrop_threshold=100.0,
-                governance_enabled=True,
-                min_vote_threshold=0.1
-            )
-            self.db.add(fund)
-            self.db.commit()
-            logger.info("Created new community fund")
+    def _ensure_community_fund(self):
+        """Ensure community fund exists in database"""
+        try:
+            fund = self.db.query(CommunityFund).first()
+            if not fund:
+                fund = CommunityFund(
+                    balance=0.0,
+                    airdrop_threshold=self.airdrop_threshold,
+                    governance_enabled=True,
+                    min_vote_threshold=0.1
+                )
+                self.db.add(fund)
+                self.db.commit()
+                logger.info("Created community fund")
+        except Exception as e:
+            logger.error(f"Failed to ensure community fund: {e}")
+            raise
+    
+    def collect_tax(self, escrow_id: str, amount: float) -> str:
+        """
+        Collect 5% tax from escrow transaction
+        
+        Args:
+            escrow_id: Escrow contract ID
+            amount: Amount to collect (should be 5% of escrow amount)
+            
+        Returns:
+            Transaction ID
+        """
+        try:
+            if amount <= 0:
+                raise ValueError("Tax amount must be positive")
+            
+            # Add to community fund using wallet integration
+            txid = self.wallet_integration.add_to_community_fund(amount, escrow_id)
+            
+            # Update community fund balance
+            fund = self.db.query(CommunityFund).first()
+            if fund:
+                fund.balance += amount
+                fund.updated_at = datetime.now(timezone.utc)
+                self.db.commit()
+            
+            logger.info(f"Collected {amount} FLOP tax for escrow {escrow_id}")
+            
+            # Check if airdrop should be triggered
+            self._check_airdrop_trigger()
+            
+            return txid
+            
+        except Exception as e:
+            logger.error(f"Failed to collect tax for escrow {escrow_id}: {e}")
+            raise CommunityFundError(f"Tax collection failed: {e}")
     
     def get_fund_balance(self) -> float:
         """Get current community fund balance"""
-        fund = self.db.query(CommunityFund).first()
-        return fund.balance if fund else 0.0
+        try:
+            fund = self.db.query(CommunityFund).first()
+            return fund.balance if fund else 0.0
+        except Exception as e:
+            logger.error(f"Failed to get fund balance: {e}")
+            return 0.0
     
-    def add_to_fund(self, amount: float) -> bool:
-        """Add amount to community fund"""
-        if amount <= 0:
-            raise ValueError("Amount must be positive")
-        
-        fund = self.db.query(CommunityFund).first()
-        if fund:
-            fund.balance += amount
-            fund.updated_at = datetime.now(timezone.utc)  # type: ignore
+    def get_fund_statistics(self) -> Dict[str, Any]:
+        """Get comprehensive fund statistics"""
+        try:
+            fund = self.db.query(CommunityFund).first()
+            if not fund:
+                return {"error": "Community fund not found"}
+            
+            # Calculate recent activity
+            last_24h = datetime.now(timezone.utc) - timedelta(hours=24)
+            recent_transactions = self.db.query(EscrowTransaction).filter(
+                and_(
+                    EscrowTransaction.transaction_type == "community_fund",
+                    EscrowTransaction.created_at >= last_24h
+                )
+            ).all()
+            
+            recent_amount = sum(tx.amount for tx in recent_transactions)
+            
+            # Calculate total collected
+            total_collected = self.db.query(func.sum(EscrowTransaction.amount)).filter(
+                EscrowTransaction.transaction_type == "community_fund"
+            ).scalar() or 0.0
+            
+            return {
+                "current_balance": fund.balance,
+                "airdrop_threshold": fund.airdrop_threshold,
+                "last_airdrop_at": fund.last_airdrop_at.isoformat() if fund.last_airdrop_at else None,
+                "last_airdrop_amount": fund.last_airdrop_amount,
+                "recent_24h_collected": recent_amount,
+                "total_collected": total_collected,
+                "next_airdrop_trigger": fund.balance >= fund.airdrop_threshold,
+                "governance_enabled": fund.governance_enabled,
+                "min_vote_threshold": fund.min_vote_threshold
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get fund statistics: {e}")
+            return {"error": str(e)}
+    
+    def _check_airdrop_trigger(self):
+        """Check if airdrop should be triggered"""
+        try:
+            fund = self.db.query(CommunityFund).first()
+            if not fund:
+                return
+            
+            # Check if threshold is met and enough time has passed
+            if (fund.balance >= fund.airdrop_threshold and 
+                (not fund.last_airdrop_at or 
+                 datetime.now(timezone.utc) - fund.last_airdrop_at >= timedelta(hours=self.airdrop_interval_hours))):
+                
+                logger.info(f"Community fund threshold reached ({fund.balance} >= {fund.airdrop_threshold}), triggering airdrop")
+                self._trigger_airdrop()
+                
+        except Exception as e:
+            logger.error(f"Error checking airdrop trigger: {e}")
+    
+    def _trigger_airdrop(self):
+        """Trigger automatic airdrop to active nodes"""
+        try:
+            if self.airdrop_in_progress:
+                logger.warning("Airdrop already in progress, skipping")
+                return
+            
+            self.airdrop_in_progress = True
+            
+            # Get community fund
+            fund = self.db.query(CommunityFund).first()
+            if not fund or fund.balance < fund.airdrop_threshold:
+                logger.warning("Insufficient funds for airdrop")
+                return
+            
+            # Get active nodes (this would integrate with node registry)
+            active_nodes = self._get_active_nodes()
+            if not active_nodes:
+                logger.warning("No active nodes found for airdrop")
+                return
+            
+            # Calculate airdrop amount per node
+            total_nodes = min(len(active_nodes), self.max_airdrop_nodes)
+            airdrop_per_node = fund.balance / total_nodes
+            
+            if airdrop_per_node < self.min_airdrop_amount:
+                logger.warning(f"Airdrop per node too small: {airdrop_per_node} < {self.min_airdrop_amount}")
+                return
+            
+            # Execute airdrop
+            successful_airdrops = 0
+            total_distributed = 0.0
+            
+            for node in active_nodes[:self.max_airdrop_nodes]:
+                try:
+                    # Get node's wallet
+                    wallet = self._get_node_wallet(node['node_id'])
+                    if not wallet:
+                        logger.warning(f"No wallet found for node {node['node_id']}")
+                        continue
+                    
+                    # Send airdrop
+                    txid = self.wallet_integration.transfer_funds(
+                        from_wallet_id=None,  # From community fund
+                        to_wallet_id=wallet.id,
+                        amount=airdrop_per_node,
+                        escrow_id=f"airdrop_{int(time.time())}"
+                    )
+                    
+                    successful_airdrops += 1
+                    total_distributed += airdrop_per_node
+                    
+                    logger.info(f"Airdropped {airdrop_per_node} FLOP to node {node['node_id']}, txid: {txid}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to airdrop to node {node['node_id']}: {e}")
+                    continue
+            
+            # Update community fund
+            fund.balance -= total_distributed
+            fund.last_airdrop_at = datetime.now(timezone.utc)
+            fund.last_airdrop_amount = total_distributed
+            fund.updated_at = datetime.now(timezone.utc)
             self.db.commit()
-            logger.info(f"Added {amount} FLOP to community fund (new balance: {fund.balance})")
-            return True
-        return False
+            
+            logger.info(f"Airdrop completed: {successful_airdrops} nodes, {total_distributed} FLOP distributed")
+            
+        except Exception as e:
+            logger.error(f"Failed to trigger airdrop: {e}")
+            raise AirdropError(f"Airdrop failed: {e}")
+        finally:
+            self.airdrop_in_progress = False
     
-    def remove_from_fund(self, amount: float, reason: str) -> bool:
-        """Remove amount from community fund (requires governance approval)"""
-        if amount <= 0:
-            raise ValueError("Amount must be positive")
-        
-        fund = self.db.query(CommunityFund).first()
-        if not fund:
-            raise CommunityFundError("Community fund not found")
-        
-        if fund.balance < amount:
-            raise CommunityFundError(f"Insufficient funds: {fund.balance} < {amount}")
-        
-        fund.balance -= amount
-        fund.updated_at = datetime.now(timezone.utc)  # type: ignore
-        self.db.commit()
-        logger.info(f"Removed {amount} FLOP from community fund for: {reason}")
-        return True
+    def _get_active_nodes(self) -> List[Dict[str, Any]]:
+        """Get list of active nodes eligible for airdrop"""
+        try:
+            # This would integrate with the node registry to get active nodes
+            # For now, return a placeholder list
+            # In real implementation, this would query the node registry
+            
+            # Placeholder implementation
+            return [
+                {"node_id": "node_001", "wallet_id": 1, "reputation": 85.0},
+                {"node_id": "node_002", "wallet_id": 2, "reputation": 92.0},
+                {"node_id": "node_003", "wallet_id": 3, "reputation": 78.0}
+            ]
+            
+        except Exception as e:
+            logger.error(f"Failed to get active nodes: {e}")
+            return []
     
-    def check_airdrop_eligibility(self) -> bool:
-        """Check if airdrop threshold is met"""
-        fund = self.db.query(CommunityFund).first()
-        if not fund:
-            return False
-        return fund.balance >= fund.airdrop_threshold
+    def _get_node_wallet(self, node_id: str) -> Optional[Any]:
+        """Get wallet for a node"""
+        try:
+            # This would integrate with the wallet repository
+            # For now, return None (placeholder)
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get wallet for node {node_id}: {e}")
+            return None
     
-    def execute_airdrop(self, distribution_ratio: float = 0.5) -> Dict[str, Any]:
+    def manual_airdrop(self, node_ids: List[str], amount_per_node: float) -> Dict[str, Any]:
         """
-        Execute airdrop to active nodes
+        Manual airdrop to specific nodes
         
         Args:
-            distribution_ratio: Percentage of fund to distribute (0.0-1.0)
-        
+            node_ids: List of node IDs to airdrop to
+            amount_per_node: Amount per node
+            
         Returns:
-            Dict with airdrop details
+            Airdrop results
         """
-        fund = self.db.query(CommunityFund).first()
-        if not fund:
-            raise CommunityFundError("Community fund not found")
-        
-        if not self.check_airdrop_eligibility():
-            raise CommunityFundError("Airdrop threshold not met")
-        
-        # Calculate airdrop amount
-        airdrop_amount = fund.balance * distribution_ratio
-        
-        # Get active nodes (nodes with recent escrow activity)
-        # For now, we'll use a simple approach - nodes with escrows in last 30 days
-        from datetime import timedelta
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
-        
-        from .models import EscrowStatus
-        active_escrows = self.db.query(Escrow).filter(
-            and_(
-                Escrow.created_at >= cutoff_date,
-                or_(
-                    Escrow.status == EscrowStatus.RELEASED,
-                    Escrow.status == EscrowStatus.ACTIVE
-                )
-            )
-        ).all()
-        
-        # Get unique wallet IDs from active escrows
-        active_wallets = set()
-        for escrow in active_escrows:
-            active_wallets.add(escrow.payer_wallet_id)
-            active_wallets.add(escrow.provider_wallet_id)
-        
-        if not active_wallets:
-            raise CommunityFundError("No active wallets found for airdrop")
-        
-        # Calculate per-wallet amount
-        per_wallet_amount = airdrop_amount / len(active_wallets)
-        
-        # Update fund
-        fund.balance -= airdrop_amount
-        fund.last_airdrop_at = datetime.now(timezone.utc)  # type: ignore
-        fund.last_airdrop_amount = airdrop_amount  # type: ignore
-        fund.updated_at = datetime.now(timezone.utc)  # type: ignore
-        
-        self.db.commit()
-        
-        airdrop_result = {
-            "airdrop_id": str(uuid.uuid4()),
-            "total_amount": airdrop_amount,
-            "per_wallet_amount": per_wallet_amount,
-            "wallet_count": len(active_wallets),
-            "wallets": list(active_wallets),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "remaining_balance": fund.balance
-        }
-        
-        logger.info(f"Airdrop executed: {airdrop_amount} FLOP distributed to {len(active_wallets)} wallets")
-        return airdrop_result
-    
-    def get_airdrop_history(self) -> List[Dict[str, Any]]:
-        """Get airdrop history"""
-        fund = self.db.query(CommunityFund).first()
-        if not fund or not fund.last_airdrop_at:
-            return []
-        
-        return [{
-            "timestamp": fund.last_airdrop_at.isoformat(),
-            "amount": fund.last_airdrop_amount,
-            "remaining_balance": fund.balance
-        }]
-    
-    def update_airdrop_threshold(self, new_threshold: float) -> bool:
-        """Update airdrop threshold (requires governance)"""
-        if new_threshold <= 0:
-            raise ValueError("Threshold must be positive")
-        
-        fund = self.db.query(CommunityFund).first()
-        if fund:
-            fund.airdrop_threshold = new_threshold
-            fund.updated_at = datetime.now(timezone.utc)  # type: ignore
+        try:
+            fund = self.db.query(CommunityFund).first()
+            if not fund:
+                raise CommunityFundError("Community fund not found")
+            
+            total_amount = len(node_ids) * amount_per_node
+            if fund.balance < total_amount:
+                raise InsufficientCommunityFundError(f"Insufficient funds: {fund.balance} < {total_amount}")
+            
+            successful_airdrops = 0
+            failed_airdrops = 0
+            total_distributed = 0.0
+            
+            for node_id in node_ids:
+                try:
+                    wallet = self._get_node_wallet(node_id)
+                    if not wallet:
+                        failed_airdrops += 1
+                        continue
+                    
+                    txid = self.wallet_integration.transfer_funds(
+                        from_wallet_id=None,
+                        to_wallet_id=wallet.id,
+                        amount=amount_per_node,
+                        escrow_id=f"manual_airdrop_{int(time.time())}"
+                    )
+                    
+                    successful_airdrops += 1
+                    total_distributed += amount_per_node
+                    
+                except Exception as e:
+                    logger.error(f"Failed to airdrop to node {node_id}: {e}")
+                    failed_airdrops += 1
+            
+            # Update community fund
+            fund.balance -= total_distributed
+            fund.updated_at = datetime.now(timezone.utc)
             self.db.commit()
-            logger.info(f"Updated airdrop threshold to {new_threshold}")
-            return True
-        return False
+            
+            return {
+                "successful_airdrops": successful_airdrops,
+                "failed_airdrops": failed_airdrops,
+                "total_distributed": total_distributed,
+                "amount_per_node": amount_per_node
+            }
+            
+        except Exception as e:
+            logger.error(f"Manual airdrop failed: {e}")
+            raise AirdropError(f"Manual airdrop failed: {e}")
     
-    def get_fund_stats(self) -> Dict[str, Any]:
-        """Get comprehensive fund statistics"""
-        fund = self.db.query(CommunityFund).first()
-        if not fund:
-            return {}
+    def update_airdrop_config(self, threshold: Optional[float] = None, 
+                            interval_hours: Optional[int] = None,
+                            min_amount: Optional[float] = None) -> bool:
+        """
+        Update airdrop configuration
         
-        # Calculate recent activity
-        from datetime import timedelta
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
-        
-        recent_escrows = self.db.query(Escrow).filter(
-            Escrow.created_at >= cutoff_date
-        ).count()
-        
-        total_escrows = self.db.query(Escrow).count()
-        
-        return {
-            "balance": fund.balance,
-            "airdrop_threshold": fund.airdrop_threshold,
-            "governance_enabled": fund.governance_enabled,
-            "min_vote_threshold": fund.min_vote_threshold,
-            "last_airdrop_at": fund.last_airdrop_at.isoformat() if fund.last_airdrop_at else None,
-            "last_airdrop_amount": fund.last_airdrop_amount,
-            "created_at": fund.created_at.isoformat(),
-            "updated_at": fund.updated_at.isoformat() if fund.updated_at else None,
-            "recent_activity": {
-                "escrows_last_30_days": recent_escrows,
-                "total_escrows": total_escrows
-            },
-            "airdrop_eligible": self.check_airdrop_eligibility()
-        } 
+        Args:
+            threshold: New airdrop threshold
+            interval_hours: New airdrop interval in hours
+            min_amount: New minimum airdrop amount per node
+            
+        Returns:
+            True if updated successfully
+        """
+        try:
+            fund = self.db.query(CommunityFund).first()
+            if not fund:
+                return False
+            
+            if threshold is not None:
+                fund.airdrop_threshold = threshold
+                self.airdrop_threshold = threshold
+            
+            if interval_hours is not None:
+                self.airdrop_interval_hours = interval_hours
+            
+            if min_amount is not None:
+                self.min_airdrop_amount = min_amount
+            
+            fund.updated_at = datetime.now(timezone.utc)
+            self.db.commit()
+            
+            logger.info("Updated airdrop configuration")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update airdrop config: {e}")
+            return False
+    
+    async def start_monitoring(self):
+        """Start background monitoring of community fund"""
+        try:
+            logger.info("Starting community fund monitoring")
+            
+            while True:
+                try:
+                    # Check for airdrop triggers
+                    self._check_airdrop_trigger()
+                    
+                    # Log fund statistics periodically
+                    stats = self.get_fund_statistics()
+                    logger.info(f"Community fund status: {stats['current_balance']} FLOP balance")
+                    
+                    # Wait before next check
+                    await asyncio.sleep(3600)  # Check every hour
+                    
+                except Exception as e:
+                    logger.error(f"Error in fund monitoring: {e}")
+                    await asyncio.sleep(300)  # Wait 5 minutes on error
+                    
+        except Exception as e:
+            logger.error(f"Fund monitoring failed: {e}")
+    
+    def stop_monitoring(self):
+        """Stop background monitoring"""
+        logger.info("Stopping community fund monitoring") 
