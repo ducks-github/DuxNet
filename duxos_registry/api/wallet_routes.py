@@ -24,6 +24,9 @@ def get_wallet_service(db: Session = Depends(get_db)) -> WalletService:
     return WalletService(db)
 
 
+
+
+
 @router.post("/create", response_model=WalletCreateResponse)
 def create_wallet(
     request: WalletCreateRequest,
@@ -51,12 +54,11 @@ def create_wallet(
 @router.get("/{node_id}", response_model=WalletInfo)
 def get_wallet(
     node_id: str,
-    auth_data: Optional[dict] = Query(None, description="Authentication data"),
     wallet_service: WalletService = Depends(get_wallet_service)
 ):
     """Get wallet information for a node"""
     try:
-        wallet = wallet_service.get_wallet(node_id, auth_data)
+        wallet = wallet_service.get_wallet(node_id, None)
         if not wallet:
             raise HTTPException(status_code=404, detail=f"No wallet found for node {node_id}")
         
@@ -71,12 +73,11 @@ def get_wallet(
 @router.get("/{node_id}/balance", response_model=WalletBalanceResponse)
 def get_wallet_balance(
     node_id: str,
-    auth_data: Optional[dict] = Query(None, description="Authentication data"),
     wallet_service: WalletService = Depends(get_wallet_service)
 ):
     """Get wallet balance for a node"""
     try:
-        result = wallet_service.get_wallet_balance(node_id, auth_data)
+        result = wallet_service.get_wallet_balance(node_id, None)
         
         if not result["success"]:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -123,12 +124,11 @@ def send_transaction(
 def get_transaction_history(
     node_id: str,
     limit: int = Query(50, ge=1, le=100, description="Number of transactions to return"),
-    auth_data: Optional[dict] = Query(None, description="Authentication data"),
     wallet_service: WalletService = Depends(get_wallet_service)
 ):
     """Get transaction history for a node's wallet"""
     try:
-        result = wallet_service.get_transaction_history(node_id, limit, auth_data)
+        result = wallet_service.get_transaction_history(node_id, limit, None)
         
         if not result["success"]:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -144,12 +144,11 @@ def get_transaction_history(
 @router.post("/{node_id}/new-address", response_model=NewAddressResponse)
 def generate_new_address(
     node_id: str,
-    auth_data: Optional[dict] = Query(None, description="Authentication data"),
     wallet_service: WalletService = Depends(get_wallet_service)
 ):
     """Generate a new address for a node's wallet"""
     try:
-        result = wallet_service.generate_new_address(node_id, auth_data)
+        result = wallet_service.generate_new_address(node_id, None)
         
         if not result["success"]:
             raise HTTPException(status_code=400, detail=result["message"])
@@ -162,7 +161,7 @@ def generate_new_address(
         raise HTTPException(status_code=500, detail=f"Error generating address: {str(e)}")
 
 
-@router.get("/health")
+@router.get("/status/health")
 def wallet_health_check():
     """Health check for wallet service"""
     return {

@@ -7,7 +7,7 @@ Provides navigation, search, and service list.
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QListWidget, QLabel, QSplitter, QListWidgetItem, QMessageBox, QDockWidget, QMenuBar, QMenu, QAction, QDialog
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QObject
 from .service_detail import ServiceDetailView
 from .user_account import UserAccountWidget
 from .settings import SettingsWidget
@@ -47,6 +47,10 @@ class MainWindow(QMainWindow):
         self.service_list.itemClicked.connect(self.show_service_details)
         splitter.addWidget(self.service_list)
         
+        # Service info label
+        self.service_info = QLabel("Select a service to view details")
+        self.service_info.setWordWrap(True)
+        
         # Service details view
         self.details_widget = ServiceDetailView(self.api_client)
         self.details_widget.install_requested.connect(self.handle_install_request)
@@ -71,7 +75,7 @@ class MainWindow(QMainWindow):
                 item.setData(Qt.UserRole, svc)
                 self.service_list.addItem(item)
         except Exception as e:
-            self.details_widget.setText(f"Error loading services: {e}")
+            self.service_info.setText(f"Error loading services: {e}")
     
     def perform_search(self):
         query = self.search_input.text().strip()
@@ -83,7 +87,7 @@ class MainWindow(QMainWindow):
                 item.setData(Qt.UserRole, svc)
                 self.service_list.addItem(item)
         except Exception as e:
-            self.details_widget.setText(f"Error searching: {e}")
+            self.service_info.setText(f"Error searching: {e}")
     
     def show_service_details(self, item):
         svc = item.data(Qt.UserRole)
