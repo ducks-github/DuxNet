@@ -1,27 +1,9 @@
-# Core web framework (uncomment if needed)
-# flask
-# fastapi
-
-# HTTP requests
-requests
-
-# Testing
-pytest
-
-# Linting and formatting
-flake8
-black
-isort
-
-# Type checking
-mypy
-
-# Environment variables
-python-dotenv
-
-# Add other dependencies as needed below 
-
-argparse
-ipaddress
-logging
-base58 
+PyQt5>=5.15.0
+aiofiles==23.2.1
+pydantic==2.5.0
+python-multipart==0.0.6 
+pyyaml fastapi==0.104.1
+pyyaml==6.0.1
+requests==2.31.0
+requests>=2.31.0 requests
+uvicorn[standard]==0.24.0

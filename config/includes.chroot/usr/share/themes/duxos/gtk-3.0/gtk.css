@@ -1,0 +1,71 @@
+/* Dux_OS GTK3 Theme */
+
+@import url("resource:///org/gnome/theme/gtk-main.css");
+
+/* Custom colors */
+@define-color theme_bg_color #2d2d2d;
+@define-color theme_fg_color #ffffff;
+@define-color theme_base_color #3c3c3c;
+@define-color theme_selected_bg_color #4a90d9;
+@define-color theme_selected_fg_color #ffffff;
+@define-color theme_tooltip_bg_color #2d2d2d;
+@define-color theme_tooltip_fg_color #ffffff;
+
+/* Window styling */
+.window-frame {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Button styling */
+.button {
+    background: linear-gradient(to bottom, #4a90d9, #357abd);
+    border: 1px solid #2d5a8a;
+    border-radius: 4px;
+    color: #ffffff;
+    padding: 6px 12px;
+}
+
+.button:hover {
+    background: linear-gradient(to bottom, #5ba0e9, #4a90d9);
+}
+
+.button:active {
+    background: linear-gradient(to bottom, #357abd, #2d5a8a);
+}
+
+/* Entry styling */
+.entry {
+    background-color: #3c3c3c;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    color: #ffffff;
+    padding: 6px;
+}
+
+.entry:focus {
+    border-color: #4a90d9;
+    box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.3);
+}
+
+/* Menu styling */
+.menu {
+    background-color: #2d2d2d;
+    border: 1px solid #555555;
+    border-radius: 4px;
+}
+
+.menu-item {
+    padding: 8px 12px;
+    color: #ffffff;
+}
+
+.menu-item:hover {
+    background-color: #4a90d9;
+}
+
+/* Panel styling */
+.panel {
+    background: linear-gradient(to bottom, #2d2d2d, #1a1a1a);
+    border-bottom: 1px solid #555555;
+}

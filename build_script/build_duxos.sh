@@ -39,7 +39,12 @@ apt update
 apt install -y live-build debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin
 
 # Configure live-build
-lb config --distribution bullseye --debian-installer live --architectures amd64 --archive-areas "main contrib non-free"
+lb config --distribution bookworm --debian-installer live --architectures amd64 --archive-areas "main contrib non-free" \
+  --mirror-bootstrap http://deb.debian.org/debian/ \
+  --mirror-chroot http://deb.debian.org/debian/ \
+  --mirror-binary http://deb.debian.org/debian/ \
+  --mirror-binary-security http://security.debian.org/debian-security/ \
+  --initramfs live-boot
 
 # Create package list for XFCE desktop
 mkdir -p config/package-lists

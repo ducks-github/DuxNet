@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Dux_OS Theme Setup Script
+# This script configures the Dux_OS theme, icons, and sounds
+
+echo "Setting up Dux_OS theme..."
+
+# Set GTK theme
+gsettings set org.gnome.desktop.interface gtk-theme "duxos"
+gsettings set org.gnome.desktop.interface icon-theme "duxos"
+gsettings set org.gnome.desktop.interface cursor-theme "duxos"
+gsettings set org.gnome.desktop.sound theme-name "duxos"
+
+# Set XFCE4 theme
+xfconf-query -c xsettings -p /Net/ThemeName -s "duxos"
+xfconf-query -c xsettings -p /Net/IconThemeName -s "duxos"
+xfconf-query -c xsettings -p /Net/SoundThemeName -s "duxos"
+xfconf-query -c xsettings -p /Net/EnableEventSounds -n -t bool -s true
+xfconf-query -c xsettings -p /Net/EnableInputFeedbackSounds -n -t bool -s true
+
+# Set desktop background
+xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s "/usr/share/backgrounds/duxos.png"
+
+# Update GRUB
+if command -v update-grub &> /dev/null; then
+    update-grub
+fi
+
+# Set permissions for theme directories
+chmod -R 755 /usr/share/themes/duxos
+chmod -R 755 /usr/share/icons/duxos
+chmod -R 755 /usr/share/sounds/duxos
+
+echo "Dux_OS theme setup complete!"

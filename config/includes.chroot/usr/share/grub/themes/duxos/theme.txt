@@ -1,0 +1,36 @@
+# Dux_OS GRUB Theme
+# Theme configuration for Dux_OS
+
+# Title font
+title-font: "DejaVu Sans 16"
+
+# Message font
+message-font: "DejaVu Sans 12"
+
+# Menu font
+menu-font: "DejaVu Sans 12"
+
+# Terminal font
+terminal-font: "DejaVu Sans Mono 12"
+
+# Colors
+title-color: "#ffffff"
+message-color: "#ffffff"
+menu-color: "#ffffff"
+menu-color-normal: "#ffffff"
+menu-color-highlight: "#000000"
+menu-color-selected: "#000000"
+menu-color-selected-highlight: "#ffffff"
+
+# Background
+background-color: "#000000"
+background-image: "/usr/share/grub/duxos-splash.png"
+
+# Menu box
+menu-box: "0 0 0 0"
+menu-box-border: "1"
+menu-box-border-color: "#ffffff"
+
+# Progress bar
+progress-bar-color: "#ffffff"
+progress-bar-border-color: "#ffffff"

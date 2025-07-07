@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Dux_OS Theme
+Comment=Custom theme for Dux_OS
+Type=X-GNOME-Metatheme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+GtkTheme=duxos
+MetacityTheme=duxos
+IconTheme=duxos
+CursorTheme=duxos
+ButtonLayout=menu:minimize,maximize,close

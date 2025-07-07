@@ -1,11 +1,27 @@
-FROM python:3.12-slim
+FROM debian:bookworm
 
-WORKDIR /app
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    live-build \
+    debootstrap \
+    squashfs-tools \
+    xorriso \
+    grub-pc-bin \
+    grub-efi-amd64-bin \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# Set working directory
+WORKDIR /workspace
 
-COPY . .
+# Copy theme customizations
+COPY config/ ./config/
 
-CMD [ "python3" ] 
+# Copy build script
+COPY build_duxos_simple.sh ./
+
+# Make the script executable
+RUN chmod +x build_duxos_simple.sh
+
+# Set the default command
+CMD ["./build_duxos_simple.sh"] 

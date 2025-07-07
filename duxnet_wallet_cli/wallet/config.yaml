@@ -1,0 +1,11 @@
+rpc:
+  host: 127.0.0.1
+  port: 32553
+  user: flopcoinrpc
+  password: your_secure_password
+wallet:
+  encryption: true
+  backup_interval: 3600
+logging:
+  level: INFO
+  file: /var/log/duxnet/wallet.log 

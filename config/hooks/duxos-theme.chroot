@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Dux_OS Theme Hook
+# This hook runs during the chroot stage to set up themes
+
+echo "Running Dux_OS theme setup..."
+
+# Ensure theme directories exist
+mkdir -p /usr/share/themes/duxos
+mkdir -p /usr/share/icons/duxos
+mkdir -p /usr/share/sounds/duxos
+mkdir -p /usr/share/grub/themes/duxos
+
+# Set proper permissions
+chmod -R 755 /usr/share/themes/duxos
+chmod -R 755 /usr/share/icons/duxos
+chmod -R 755 /usr/share/sounds/duxos
+chmod -R 755 /usr/share/grub/themes/duxos
+
+# Make the setup script executable
+chmod +x /usr/local/bin/setup-duxos-theme
+
+echo "Dux_OS theme hook completed."

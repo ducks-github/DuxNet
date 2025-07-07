@@ -1,0 +1,10 @@
+[Sound Theme]
+Name=Dux_OS Sounds
+Comment=Custom sound theme for Dux_OS
+Inherits=freedesktop
+
+# Directories
+Directories=stereo
+
+[stereo]
+OutputFormat=stereo
