@@ -68,6 +68,86 @@ cd ~/DuxNet/DuxNet
 source .venv/bin/activate
 ```
 
+## 🛠️ Developer Experience
+
+### **Quick Setup (Recommended)**
+Use our automated setup script for a complete development environment:
+
+```bash
+# Clone and setup in one command
+git clone https://github.com/ducks-github/DuxNet.git
+cd DuxNet
+./setup.sh
+
+# For development with pre-commit hooks
+./setup.sh --with-pre-commit
+```
+
+### **Docker Development**
+Run the entire DuxNet stack with Docker Compose:
+
+```bash
+# Build and start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+**Available Services:**
+- **Store Service** - `http://localhost:8000`
+- **Task Engine** - `http://localhost:8001`
+- **Registry** - `http://localhost:8002`
+- **Wallet** - `http://localhost:8003`
+- **Escrow** - `http://localhost:8004`
+- **Desktop GUI** - `http://localhost:8005`
+- **Health Monitor** - `http://localhost:8006`
+
+### **Development Commands**
+Use the Makefile for common development tasks:
+
+```bash
+# Show all available commands
+make help
+
+# Install development dependencies
+make install-dev
+
+# Format code
+make format
+
+# Run linting
+make lint
+
+# Run tests
+make test
+
+# Start development server with hot reload
+make dev-store
+```
+
+### **Code Quality**
+Pre-commit hooks automatically ensure code quality:
+
+```bash
+# Install pre-commit hooks
+make pre-commit
+
+# Run manually
+pre-commit run --all-files
+```
+
+**Hooks include:**
+- **Black** - Code formatting
+- **isort** - Import sorting
+- **flake8** - Linting
+- **mypy** - Type checking
+- **bandit** - Security checks
+- **yamllint** - YAML validation
+
 ## 🏗️ Architecture Overview
 
 DuxNet follows a modular, decentralized architecture with clear separation of concerns. Each module operates independently while communicating through well-defined interfaces.

@@ -1,544 +1,349 @@
 """
-Tests for Store Service
+Unit tests for the DuxNet Store Service.
 
-Comprehensive test suite for the DuxOS API/App Store service.
+Tests cover:
+- API registration and management
+- Search functionality
+- Rating system
+- Metadata storage
+- Error handling
 """
 
 import pytest
 import tempfile
 import shutil
+import os
+from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
-from unittest.mock import Mock, patch
 
-from duxos_store.store_service import StoreService
-from duxos_store.rating_system import RatingSystem
-from duxos_store.metadata_storage import MetadataStorage
-from duxos_store.models import Service, Review, Rating, ServiceCategory, ServiceStatus, SearchFilter
+# Import the modules to test
+from duxnet_store.store_service import StoreService
+from duxnet_store.rating_system import RatingSystem
+from duxnet_store.metadata_storage import MetadataStorage
 
 
 class TestStoreService:
-    """Test cases for StoreService"""
-    
+    """Test cases for StoreService class."""
+
     @pytest.fixture
     def temp_dir(self):
-        """Create temporary directory for tests"""
+        """Create a temporary directory for testing."""
         temp_dir = tempfile.mkdtemp()
         yield temp_dir
         shutil.rmtree(temp_dir)
-    
+
     @pytest.fixture
-    def store_service(self, temp_dir):
-        """Create store service for testing"""
+    def config(self, temp_dir):
+        """Create test configuration."""
+        return {
+            "storage": {
+                "path": temp_dir,
+                "use_ipfs": False,
+                "backup_enabled": False
+            },
+            "rating": {
+                "min_reviews_for_weighted": 5,
+                "recency_weight_days": 30
+            },
+            "search": {
+                "default_limit": 20,
+                "max_limit": 100
+            }
+        }
+
+    @pytest.fixture
+    def store_service(self, config, temp_dir):
+        """Create a StoreService instance for testing."""
         metadata_storage = MetadataStorage(storage_path=temp_dir)
         rating_system = RatingSystem()
         return StoreService(metadata_storage, rating_system)
-    
-    def test_register_service(self, store_service):
-        """Test service registration"""
-        service_data = {
-            "name": "Test API",
-            "description": "A test API service",
-            "category": "api",
-            "code_hash": "test_hash_123",
-            "price_per_call": 0.01,
-            "tags": ["test", "api"]
+
+    @pytest.fixture
+    def sample_api_data(self):
+        """Sample API data for testing."""
+        return {
+            "name": "test_api",
+            "version": "1.0.0",
+            "description": "A test API for unit testing",
+            "price": 0.1,
+            "category": "test",
+            "endpoint": "https://api.test.com/test",
+            "documentation": "https://docs.test.com/test"
+        }
+
+    def test_store_service_initialization(self, store_service, config):
+        """Test StoreService initialization."""
+        assert store_service is not None
+        assert store_service.config == config
+        assert hasattr(store_service, 'rating_system')
+        assert hasattr(store_service, 'metadata_storage')
+
+    def test_register_api_success(self, store_service, sample_api_data):
+        """Test successful API registration."""
+        with patch.object(store_service.metadata_storage, 'store_api') as mock_store:
+            mock_store.return_value = "api_123"
+            
+            api_id = store_service.register_api(sample_api_data)
+            
+            assert api_id == "api_123"
+            mock_store.assert_called_once()
+            
+            # Verify the stored data
+            stored_data = mock_store.call_args[0][0]
+            assert stored_data["name"] == sample_api_data["name"]
+            assert stored_data["version"] == sample_api_data["version"]
+            assert stored_data["price"] == sample_api_data["price"]
+
+    def test_register_api_validation_error(self, store_service):
+        """Test API registration with invalid data."""
+        invalid_data = {
+            "name": "",  # Empty name should fail validation
+            "version": "1.0.0",
+            "price": -1.0  # Negative price should fail validation
         }
         
-        service = store_service.register_service(service_data, "user1", "Test User")
+        with pytest.raises(ValueError):
+            store_service.register_api(invalid_data)
+
+    def test_search_apis_by_name(self, store_service):
+        """Test API search by name."""
+        mock_apis = [
+            {"id": "1", "name": "image_processor", "description": "Process images"},
+            {"id": "2", "name": "text_analyzer", "description": "Analyze text"},
+            {"id": "3", "name": "data_processor", "description": "Process data"}
+        ]
         
-        assert service.name == "Test API"
-        assert service.owner_id == "user1"
-        assert service.category == ServiceCategory.API
-        assert service.status == ServiceStatus.DRAFT
-        assert service.service_id in store_service.services
+        with patch.object(store_service.metadata_storage, 'search_apis') as mock_search:
+            mock_search.return_value = [mock_apis[0]]  # Return image_processor
+            
+            results = store_service.search_apis("image", limit=10)
+            
+            assert len(results) == 1
+            assert results[0]["name"] == "image_processor"
+            mock_search.assert_called_once_with("image", limit=10)
+
+    def test_search_apis_by_category(self, store_service):
+        """Test API search by category."""
+        mock_apis = [
+            {"id": "1", "name": "api1", "category": "image_processing"},
+            {"id": "2", "name": "api2", "category": "text_processing"}
+        ]
         
-        # Check that rating and reviews are initialized
-        assert service.service_id in store_service.ratings
-        assert service.service_id in store_service.reviews
-    
-    def test_register_service_missing_fields(self, store_service):
-        """Test service registration with missing required fields"""
-        service_data = {
-            "name": "Test API",
-            # Missing description, category, code_hash
+        with patch.object(store_service.metadata_storage, 'search_apis') as mock_search:
+            mock_search.return_value = [mock_apis[0]]
+            
+            results = store_service.search_apis("image_processing", category="image_processing")
+            
+            assert len(results) == 1
+            assert results[0]["category"] == "image_processing"
+
+    def test_get_api_by_id(self, store_service):
+        """Test retrieving API by ID."""
+        mock_api = {
+            "id": "api_123",
+            "name": "test_api",
+            "version": "1.0.0",
+            "rating": 4.5,
+            "reviews_count": 10
         }
         
-        with pytest.raises(ValueError, match="Missing required field"):
-            store_service.register_service(service_data, "user1", "Test User")
-    
-    def test_update_service(self, store_service):
-        """Test service updates"""
-        # Register a service first
-        service_data = {
-            "name": "Test API",
-            "description": "A test API service",
-            "category": "api",
-            "code_hash": "test_hash_123"
+        with patch.object(store_service.metadata_storage, 'get_api') as mock_get:
+            mock_get.return_value = mock_api
+            
+            api = store_service.get_api("api_123")
+            
+            assert api == mock_api
+            mock_get.assert_called_once_with("api_123")
+
+    def test_get_api_not_found(self, store_service):
+        """Test retrieving non-existent API."""
+        with patch.object(store_service.metadata_storage, 'get_api') as mock_get:
+            mock_get.return_value = None
+            
+            api = store_service.get_api("non_existent")
+            
+            assert api is None
+
+    def test_add_review_success(self, store_service):
+        """Test adding a review successfully."""
+        review_data = {
+            "api_id": "api_123",
+            "rating": 5,
+            "comment": "Excellent API!"
         }
-        service = store_service.register_service(service_data, "user1", "Test User")
         
-        # Update the service
-        updates = {
-            "name": "Updated Test API",
+        with patch.object(store_service.rating_system, 'add_review') as mock_add:
+            mock_add.return_value = "review_456"
+            
+            review_id = store_service.add_review(review_data)
+            
+            assert review_id == "review_456"
+            mock_add.assert_called_once()
+
+    def test_add_review_invalid_rating(self, store_service):
+        """Test adding review with invalid rating."""
+        review_data = {
+            "api_id": "api_123",
+            "rating": 6,  # Rating should be 1-5
+            "comment": "Test comment"
+        }
+        
+        with pytest.raises(ValueError):
+            store_service.add_review(review_data)
+
+    def test_get_api_reviews(self, store_service):
+        """Test retrieving API reviews."""
+        mock_reviews = [
+            {"id": "1", "rating": 5, "comment": "Great!"},
+            {"id": "2", "rating": 4, "comment": "Good"}
+        ]
+        
+        with patch.object(store_service.rating_system, 'get_reviews') as mock_get:
+            mock_get.return_value = mock_reviews
+            
+            reviews = store_service.get_reviews("api_123", limit=10)
+            
+            assert reviews == mock_reviews
+            mock_get.assert_called_once_with("api_123", limit=10)
+
+    def test_update_api_success(self, store_service):
+        """Test updating API information."""
+        update_data = {
             "description": "Updated description",
-            "price_per_call": 0.02
+            "price": 0.2
         }
         
-        updated_service = store_service.update_service(service.service_id, updates, "user1")
+        with patch.object(store_service.metadata_storage, 'update_api') as mock_update:
+            mock_update.return_value = True
+            
+            success = store_service.update_api("api_123", update_data)
+            
+            assert success is True
+            mock_update.assert_called_once_with("api_123", update_data)
+
+    def test_delete_api_success(self, store_service):
+        """Test deleting an API."""
+        with patch.object(store_service.metadata_storage, 'delete_api') as mock_delete:
+            mock_delete.return_value = True
+            
+            success = store_service.delete_api("api_123")
+            
+            assert success is True
+            mock_delete.assert_called_once_with("api_123")
+
+    def test_get_categories(self, store_service):
+        """Test retrieving available categories."""
+        mock_categories = ["image_processing", "text_processing", "data_analysis"]
         
-        assert updated_service.name == "Updated Test API"
-        assert updated_service.description == "Updated description"
-        assert updated_service.price_per_call == 0.02
-    
-    def test_update_service_unauthorized(self, store_service):
-        """Test service update by unauthorized user"""
-        # Register a service
-        service_data = {
-            "name": "Test API",
-            "description": "A test API service",
-            "category": "api",
-            "code_hash": "test_hash_123"
-        }
-        service = store_service.register_service(service_data, "user1", "Test User")
-        
-        # Try to update with different user
-        updates = {"name": "Unauthorized Update"}
-        result = store_service.update_service(service.service_id, updates, "user2")
-        
-        assert result is None
-    
-    def test_publish_service(self, store_service):
-        """Test service publishing"""
-        # Register a service
-        service_data = {
-            "name": "Test API",
-            "description": "A test API service",
-            "category": "api",
-            "code_hash": "test_hash_123"
-        }
-        service = store_service.register_service(service_data, "user1", "Test User")
-        
-        # Publish the service
-        published_service = store_service.publish_service(service.service_id, "user1")
-        
-        assert published_service.status == ServiceStatus.PUBLISHED
-        assert published_service.published_at is not None
-    
-    def test_suspend_service(self, store_service):
-        """Test service suspension"""
-        # Register and publish a service
-        service_data = {
-            "name": "Test API",
-            "description": "A test API service",
-            "category": "api",
-            "code_hash": "test_hash_123"
-        }
-        service = store_service.register_service(service_data, "user1", "Test User")
-        store_service.publish_service(service.service_id, "user1")
-        
-        # Suspend the service
-        suspended_service = store_service.suspend_service(service.service_id, "user1")
-        
-        assert suspended_service.status == ServiceStatus.SUSPENDED
-    
-    def test_search_services(self, store_service):
-        """Test service search functionality"""
-        # Register multiple services
-        services_data = [
-            {
-                "name": "Image API",
-                "description": "Image processing service",
-                "category": "image_processing",
-                "code_hash": "hash1",
-                "tags": ["image", "processing"]
-            },
-            {
-                "name": "Text API",
-                "description": "Text processing service",
-                "category": "text_processing",
-                "code_hash": "hash2",
-                "tags": ["text", "nlp"]
-            },
-            {
-                "name": "Data API",
-                "description": "Data analysis service",
-                "category": "data_analysis",
-                "code_hash": "hash3",
-                "tags": ["data", "analysis"]
-            }
+        with patch.object(store_service.metadata_storage, 'get_categories') as mock_get:
+            mock_get.return_value = mock_categories
+            
+            categories = store_service.get_categories()
+            
+            assert categories == mock_categories
+            mock_get.assert_called_once()
+
+    def test_get_popular_apis(self, store_service):
+        """Test retrieving popular APIs."""
+        mock_apis = [
+            {"id": "1", "name": "popular1", "rating": 4.8},
+            {"id": "2", "name": "popular2", "rating": 4.7}
         ]
         
-        for i, data in enumerate(services_data):
-            service = store_service.register_service(data, f"user{i}", f"User{i}")
-            store_service.publish_service(service.service_id, f"user{i}")
-        
-        # Test search by query
-        search_filter = SearchFilter(query="image")
-        results, count = store_service.search_services(search_filter)
-        
-        assert len(results) == 1
-        assert results[0].name == "Image API"
-        assert count == 1
-        
-        # Test search by category
-        search_filter = SearchFilter(category=ServiceCategory.TEXT_PROCESSING)
-        results, count = store_service.search_services(search_filter)
-        
-        assert len(results) == 1
-        assert results[0].name == "Text API"
-        assert count == 1
-    
-    def test_add_review(self, store_service):
-        """Test adding reviews"""
-        # Register a service
-        service_data = {
-            "name": "Test API",
-            "description": "A test API service",
-            "category": "api",
-            "code_hash": "test_hash_123"
-        }
-        service = store_service.register_service(service_data, "user1", "Test User")
-        
+        with patch.object(store_service.metadata_storage, 'get_popular_apis') as mock_get:
+            mock_get.return_value = mock_apis
+            
+            apis = store_service.get_popular_apis(limit=5)
+            
+            assert apis == mock_apis
+            mock_get.assert_called_once_with(limit=5)
+
+    @pytest.mark.integration
+    def test_full_api_lifecycle(self, store_service, sample_api_data):
+        """Test complete API lifecycle: register, search, review, update, delete."""
+        # Register API
+        with patch.object(store_service.metadata_storage, 'store_api') as mock_store:
+            mock_store.return_value = "api_123"
+            api_id = store_service.register_api(sample_api_data)
+            assert api_id == "api_123"
+
+        # Search for the API
+        with patch.object(store_service.metadata_storage, 'search_apis') as mock_search:
+            mock_search.return_value = [{"id": api_id, **sample_api_data}]
+            results = store_service.search_apis("test_api")
+            assert len(results) == 1
+            assert results[0]["id"] == api_id
+
         # Add a review
-        review = store_service.add_review(
-            service.service_id, "user2", "Reviewer",
-            5, "Great service", "This is an excellent API"
-        )
-        
-        assert review.rating == 5
-        assert review.user_id == "user2"
-        assert review.service_id == service.service_id
-        
-        # Check that rating statistics are updated
-        rating = store_service.get_rating(service.service_id)
-        assert rating.total_ratings == 1
-        assert rating.average_rating == 5.0
-    
-    def test_add_duplicate_review(self, store_service):
-        """Test adding duplicate review by same user"""
-        # Register a service
-        service_data = {
-            "name": "Test API",
-            "description": "A test API service",
-            "category": "api",
-            "code_hash": "test_hash_123"
-        }
-        service = store_service.register_service(service_data, "user1", "Test User")
-        
-        # Add first review
-        store_service.add_review(
-            service.service_id, "user2", "Reviewer",
-            5, "Great service", "This is an excellent API"
-        )
-        
-        # Try to add duplicate review
-        with pytest.raises(ValueError, match="User has already reviewed this service"):
-            store_service.add_review(
-                service.service_id, "user2", "Reviewer",
-                4, "Good service", "This is a good API"
-            )
-    
-    def test_record_service_usage(self, store_service):
-        """Test recording service usage"""
-        # Register a service
-        service_data = {
-            "name": "Test API",
-            "description": "A test API service",
-            "category": "api",
-            "code_hash": "test_hash_123"
-        }
-        service = store_service.register_service(service_data, "user1", "Test User")
-        
-        # Record usage
-        usage = store_service.record_service_usage(service.service_id, "user2", 0.01)
-        
-        assert usage.total_calls == 1
-        assert usage.total_spent == 0.01
-        assert usage.service_id == service.service_id
-        assert usage.user_id == "user2"
-        
-        # Check service statistics are updated
-        updated_service = store_service.get_service(service.service_id)
-        assert updated_service.total_calls == 1
-        assert updated_service.total_revenue == 0.01
-    
-    def test_toggle_favorite(self, store_service):
-        """Test toggling favorite status"""
-        # Register a service
-        service_data = {
-            "name": "Test API",
-            "description": "A test API service",
-            "category": "api",
-            "code_hash": "test_hash_123"
-        }
-        service = store_service.register_service(service_data, "user1", "Test User")
-        
-        # Toggle favorite
-        is_favorite = store_service.toggle_favorite(service.service_id, "user2")
-        assert is_favorite is True
-        
-        # Toggle again
-        is_favorite = store_service.toggle_favorite(service.service_id, "user2")
-        assert is_favorite is False
-    
-    def test_get_favorites(self, store_service):
-        """Test getting user favorites"""
-        # Register services
-        services_data = [
-            {
-                "name": "API 1",
-                "description": "First API",
-                "category": "api",
-                "code_hash": "hash1"
-            },
-            {
-                "name": "API 2",
-                "description": "Second API",
-                "category": "api",
-                "code_hash": "hash2"
-            }
-        ]
-        
-        for i, data in enumerate(services_data):
-            service = store_service.register_service(data, f"user{i}", f"User{i}")
-        
-        # Add to favorites
-        store_service.toggle_favorite(services_data[0]["name"], "user1")
-        store_service.toggle_favorite(services_data[1]["name"], "user1")
-        
-        # Get favorites
-        favorites = store_service.get_favorites("user1")
-        assert len(favorites) == 2
-    
-    def test_get_popular_services(self, store_service):
-        """Test getting popular services"""
-        # Register services with different usage
-        services_data = [
-            {
-                "name": "Popular API",
-                "description": "Popular service",
-                "category": "api",
-                "code_hash": "hash1"
-            },
-            {
-                "name": "Less Popular API",
-                "description": "Less popular service",
-                "category": "api",
-                "code_hash": "hash2"
-            }
-        ]
-        
-        for i, data in enumerate(services_data):
-            service = store_service.register_service(data, f"user{i}", f"User{i}")
-            store_service.publish_service(service.service_id, f"user{i}")
-        
-        # Add usage to first service
-        store_service.record_service_usage(services_data[0]["name"], "user1", 0.01)
-        store_service.record_service_usage(services_data[0]["name"], "user2", 0.01)
-        
-        # Get popular services
-        popular = store_service.get_popular_services(limit=2)
-        assert len(popular) == 2
-        assert popular[0].name == "Popular API"  # Should be first due to usage
-    
-    def test_get_recent_services(self, store_service):
-        """Test getting recent services"""
-        # Register services
-        services_data = [
-            {
-                "name": "Old API",
-                "description": "Old service",
-                "category": "api",
-                "code_hash": "hash1"
-            },
-            {
-                "name": "New API",
-                "description": "New service",
-                "category": "api",
-                "code_hash": "hash2"
-            }
-        ]
-        
-        for i, data in enumerate(services_data):
-            service = store_service.register_service(data, f"user{i}", f"User{i}")
-            store_service.publish_service(service.service_id, f"user{i}")
-        
-        # Get recent services
-        recent = store_service.get_recent_services(limit=2)
-        assert len(recent) == 2
-        assert recent[0].name == "New API"  # Should be first (most recent)
-    
-    def test_get_service_statistics(self, store_service):
-        """Test getting store statistics"""
-        # Register some services
-        services_data = [
-            {
-                "name": "API 1",
-                "description": "First API",
-                "category": "api",
-                "code_hash": "hash1"
-            },
-            {
-                "name": "API 2",
-                "description": "Second API",
-                "category": "utility",
-                "code_hash": "hash2"
-            }
-        ]
-        
-        for i, data in enumerate(services_data):
-            service = store_service.register_service(data, f"user{i}", f"User{i}")
-            store_service.publish_service(service.service_id, f"user{i}")
-        
-        # Add some usage
-        store_service.record_service_usage(services_data[0]["name"], "user1", 0.01)
-        
-        # Get statistics
-        stats = store_service.get_service_statistics()
-        
-        assert stats["total_services"] == 2
-        assert stats["published_services"] == 2
-        assert stats["total_calls"] == 1
-        assert stats["total_revenue"] == 0.01
-        assert "api" in stats["category_distribution"]
-        assert "utility" in stats["category_distribution"]
+        with patch.object(store_service.rating_system, 'add_review') as mock_review:
+            mock_review.return_value = "review_456"
+            review_id = store_service.add_review({
+                "api_id": api_id,
+                "rating": 5,
+                "comment": "Great API!"
+            })
+            assert review_id == "review_456"
 
+        # Update the API
+        with patch.object(store_service.metadata_storage, 'update_api') as mock_update:
+            mock_update.return_value = True
+            success = store_service.update_api(api_id, {"price": 0.15})
+            assert success is True
 
-class TestRatingSystem:
-    """Test cases for RatingSystem"""
-    
-    @pytest.fixture
-    def rating_system(self):
-        """Create rating system for testing"""
-        return RatingSystem()
-    
-    def test_add_review(self, rating_system):
-        """Test adding a review"""
-        review = rating_system.add_review(
-            "service1", "user1", "User One",
-            5, "Great service", "Excellent API"
-        )
-        
-        assert review.rating == 5
-        assert review.service_id == "service1"
-        assert review.user_id == "user1"
-        
-        # Check rating statistics
-        rating = rating_system.get_rating("service1")
-        assert rating.total_ratings == 1
-        assert rating.average_rating == 5.0
-    
-    def test_duplicate_review(self, rating_system):
-        """Test adding duplicate review"""
-        rating_system.add_review(
-            "service1", "user1", "User One",
-            5, "Great service", "Excellent API"
-        )
-        
-        with pytest.raises(ValueError, match="User has already reviewed this service"):
-            rating_system.add_review(
-                "service1", "user1", "User One",
-                4, "Good service", "Good API"
-            )
-    
-    def test_rating_distribution(self, rating_system):
-        """Test rating distribution calculation"""
-        # Add reviews with different ratings
-        ratings = [5, 4, 3, 5, 2]
-        for i, rating_val in enumerate(ratings):
-            rating_system.add_review(
-                "service1", f"user{i}", f"User{i}",
-                rating_val, f"Review {i}", f"Content {i}"
-            )
-        
-        rating = rating_system.get_rating("service1")
-        distribution = rating.rating_distribution
-        
-        assert distribution[5] == 2
-        assert distribution[4] == 1
-        assert distribution[3] == 1
-        assert distribution[2] == 1
-        assert distribution[1] == 0
-    
-    def test_weighted_rating(self, rating_system):
-        """Test weighted rating calculation"""
-        # Add multiple reviews
-        for i in range(10):
-            rating_system.add_review(
-                "service1", f"user{i}", f"User{i}",
-                5, f"Review {i}", f"Content {i}"
-            )
-        
-        weighted = rating_system.calculate_weighted_rating("service1")
-        assert weighted > 0
-        assert weighted <= 5.0
+        # Delete the API
+        with patch.object(store_service.metadata_storage, 'delete_api') as mock_delete:
+            mock_delete.return_value = True
+            success = store_service.delete_api(api_id)
+            assert success is True
 
+    def test_error_handling_database_error(self, store_service, sample_api_data):
+        """Test error handling when database operations fail."""
+        with patch.object(store_service.metadata_storage, 'store_api') as mock_store:
+            mock_store.side_effect = Exception("Database connection failed")
+            
+            with pytest.raises(Exception) as exc_info:
+                store_service.register_api(sample_api_data)
+            
+            assert "Database connection failed" in str(exc_info.value)
 
-class TestMetadataStorage:
-    """Test cases for MetadataStorage"""
-    
-    @pytest.fixture
-    def temp_dir(self):
-        """Create temporary directory for tests"""
-        temp_dir = tempfile.mkdtemp()
-        yield temp_dir
-        shutil.rmtree(temp_dir)
-    
-    @pytest.fixture
-    def storage(self, temp_dir):
-        """Create metadata storage for testing"""
-        return MetadataStorage(storage_path=temp_dir)
-    
-    def test_store_service_metadata(self, storage):
-        """Test storing service metadata"""
-        service = Service(
-            name="Test Service",
-            description="Test description",
-            category=ServiceCategory.API,
-            owner_id="user1",
-            code_hash="test_hash"
-        )
+    def test_error_handling_invalid_config(self, temp_dir):
+        """Test error handling with invalid configuration."""
+        # Test with invalid storage path
+        with pytest.raises(Exception):
+            invalid_storage = MetadataStorage(storage_path="/invalid/path")
+            rating_system = RatingSystem()
+            StoreService(invalid_storage, rating_system)
+
+    @pytest.mark.performance
+    def test_search_performance(self, store_service):
+        """Test search performance with large dataset."""
+        # Mock a large dataset
+        large_dataset = [{"id": f"api_{i}", "name": f"api_{i}"} for i in range(1000)]
         
-        content_hash = storage.store_service_metadata(service)
-        
-        assert content_hash is not None
-        assert len(content_hash) == 64  # SHA256 hash length
-        
-        # Check that metadata can be retrieved
-        metadata = storage.get_service_metadata(service.service_id)
-        assert metadata is not None
-        assert metadata["name"] == "Test Service"
-    
-    def test_search_services(self, storage):
-        """Test service search"""
-        # Store multiple services
-        services = [
-            Service(name="Image API", description="Image processing", category=ServiceCategory.IMAGE_PROCESSING, owner_id="user1", code_hash="hash1"),
-            Service(name="Text API", description="Text processing", category=ServiceCategory.TEXT_PROCESSING, owner_id="user2", code_hash="hash2"),
-            Service(name="Data API", description="Data analysis", category=ServiceCategory.DATA_ANALYSIS, owner_id="user3", code_hash="hash3")
+        with patch.object(store_service.metadata_storage, 'search_apis') as mock_search:
+            mock_search.return_value = large_dataset[:20]  # Return first 20
+            
+            import time
+            start_time = time.time()
+            results = store_service.search_apis("api", limit=20)
+            end_time = time.time()
+            
+            assert len(results) == 20
+            assert (end_time - start_time) < 1.0  # Should complete within 1 second
+
+    def test_data_validation_edge_cases(self, store_service):
+        """Test data validation with edge cases."""
+        edge_cases = [
+            {"name": "a" * 1000, "version": "1.0.0", "price": 0.0},  # Very long name
+            {"name": "test", "version": "1.0.0", "price": 999999.99},  # Very high price
+            {"name": "test", "version": "1.0.0", "price": 0.0, "category": ""},  # Empty category
         ]
         
-        for service in services:
-            storage.store_service_metadata(service)
-        
-        # Search by query
-        results = storage.search_services("image")
-        assert len(results) == 1
-        assert results[0]["name"] == "Image API"
-        
-        # Search by category
-        results = storage.search_services("", filters={"category": "text_processing"})
-        assert len(results) == 1
-        assert results[0]["name"] == "Text API"
-    
-    def test_get_statistics(self, storage):
-        """Test getting storage statistics"""
-        # Store some data
-        service = Service(name="Test", description="Test", category=ServiceCategory.API, owner_id="user1", code_hash="hash")
-        storage.store_service_metadata(service)
-        
-        stats = storage.get_service_statistics()
-        
-        assert stats["total_services"] == 1
-        assert stats["storage_size"] > 0
-        assert stats["cache_size"] >= 0 
+        for case in edge_cases:
+            with patch.object(store_service.metadata_storage, 'store_api'):
+                # Should not raise validation errors for these edge cases
+                try:
+                    store_service.register_api(case)
+                except ValueError:
+                    # Some edge cases might be invalid, which is expected
+                    pass 

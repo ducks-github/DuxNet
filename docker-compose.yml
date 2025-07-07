@@ -1,9 +1,185 @@
 version: "3.9"
+
 services:
-  duxos:
+  # Store Service - Decentralized app/API store
+  store:
     build: .
+    container_name: duxnet-store
+    ports:
+      - "8000:8000"
     volumes:
-      - .:/app
-    command: python3
-    # Uncomment and set if you have a main script, e.g.:
-    # command: python3 duxos_registry/main.py 
+      - ./duxnet_store:/app/duxnet_store
+      - ./store_metadata:/app/store_metadata
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+    command: python3 -m duxnet_store.main --config duxnet_store/config.yaml
+    networks:
+      - duxnet-network
+    restart: unless-stopped
+
+  # Task Engine - Distributed computing engine
+  task-engine:
+    build: .
+    container_name: duxnet-task-engine
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./duxos_tasks:/app/duxos_tasks
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+    command: python3 -m duxos_tasks.main --config duxos_tasks/config.yaml
+    networks:
+      - duxnet-network
+    restart: unless-stopped
+    depends_on:
+      - store
+
+  # Registry Service - Node management
+  registry:
+    build: .
+    container_name: duxnet-registry
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./duxnet_registry:/app/duxnet_registry
+      - ./duxos_registry:/app/duxos_registry
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+    command: python3 -m duxnet_registry.main --config duxnet_registry/config.yaml
+    networks:
+      - duxnet-network
+    restart: unless-stopped
+
+  # Wallet Service - Flopcoin integration
+  wallet:
+    build: .
+    container_name: duxnet-wallet
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./duxnet_wallet:/app/duxnet_wallet
+      - ./duxos_wallet:/app/duxos_wallet
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+    command: python3 -m duxnet_wallet.main --config duxnet_wallet/config.yaml
+    networks:
+      - duxnet-network
+    restart: unless-stopped
+
+  # Escrow Service - Payment management
+  escrow:
+    build: .
+    container_name: duxnet-escrow
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./duxos_escrow:/app/duxos_escrow
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+    command: python3 -m duxos_escrow.main --config duxos_escrow/config.yaml
+    networks:
+      - duxnet-network
+    restart: unless-stopped
+    depends_on:
+      - wallet
+      - store
+
+  # Desktop GUI - PyQt application
+  desktop:
+    build: .
+    container_name: duxnet-desktop
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./duxnet_desktop:/app/duxnet_desktop
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - $HOME/.Xauthority:/root/.Xauthority:rw
+    environment:
+      - PYTHONPATH=/app
+      - DISPLAY=${DISPLAY}
+    command: python3 duxnet_desktop/desktop_manager.py
+    networks:
+      - duxnet-network
+    restart: unless-stopped
+    depends_on:
+      - store
+      - wallet
+
+  # Health Monitor - System monitoring
+  health-monitor:
+    build: .
+    container_name: duxnet-health-monitor
+    ports:
+      - "8006:8006"
+    volumes:
+      - ./health_monitor.py:/app/health_monitor.py
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+    command: python3 health_monitor.py
+    networks:
+      - duxnet-network
+    restart: unless-stopped
+
+  # Database - PostgreSQL (optional, for production)
+  postgres:
+    image: postgres:15
+    container_name: duxnet-postgres
+    environment:
+      POSTGRES_DB: duxnet
+      POSTGRES_USER: duxnet
+      POSTGRES_PASSWORD: duxnet_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - duxnet-network
+    restart: unless-stopped
+
+  # Redis - Caching and session storage
+  redis:
+    image: redis:7-alpine
+    container_name: duxnet-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - duxnet-network
+    restart: unless-stopped
+
+  # Nginx - Reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: duxnet-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - duxnet-network
+    restart: unless-stopped
+    depends_on:
+      - store
+      - task-engine
+      - registry
+      - wallet
+
+networks:
+  duxnet-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_data:
+  redis_data: 
