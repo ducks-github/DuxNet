@@ -1,9 +1,8 @@
 PyQt5>=5.15.0
 aiofiles==23.2.1
 pydantic==2.5.0
-python-multipart==0.0.6 
-pyyaml fastapi==0.104.1
+python-multipart==0.0.6
 pyyaml==6.0.1
+fastapi==0.104.1
 requests==2.31.0
-requests>=2.31.0 requests
 uvicorn[standard]==0.24.0
