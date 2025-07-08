@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from .models import Rating, Review, Service
+from backend.duxnet_store.models import Rating, Review, Service
 
 
 class MetadataStorage:

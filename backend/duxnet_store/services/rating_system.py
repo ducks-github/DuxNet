@@ -10,7 +10,7 @@ from dataclasses import asdict
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-from .models import Rating, Review, Service
+from backend.duxnet_store.models import Rating, Review, Service
 
 
 class RatingSystem:
