@@ -257,3 +257,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **DuxNet** - Building the future of decentralized applications! 🚀 
+
+---
+
+## ⚠️ Blockchain Sync Time Notice
+
+**DuxNet supports ten major blockchains. When you first run the application, it will take significant time to sync and load wallet data for all supported blockchains.**
+
+- The desktop GUI will open immediately, but balances and transaction history may take several minutes (or longer) to appear, depending on your network speed and the state of each blockchain.
+- Full blockchain synchronization (if running your own nodes) can take hours or days per blockchain. By default, DuxNet connects to public nodes or uses lightweight clients where possible, but some operations may still be slow.
+- Please be patient during the initial sync. The status bar in the wallet tab will show connection and sync progress for each blockchain.
+
+--- 
