@@ -48,19 +48,13 @@ def main():
     print("\n🔧 Starting DuxNet core services...")
     
     for module_path, args in SERVICES:
-        # Check if the module directory exists (cross-platform)
-        module_dir = os.path.join(*module_path.split("."))
-        if not os.path.exists(module_dir):
-            print(f"⚠️  Warning: {module_dir} not found (checked: {os.path.abspath(module_dir)}), skipping.")
+        # Check if the main .py file exists (cross-platform)
+        module_parts = module_path.split(".")
+        py_file = os.path.join(*module_parts[:-1], module_parts[-1] + ".py")
+        if not os.path.exists(py_file):
+            print(f"⚠️  Warning: {py_file} not found (checked: {os.path.abspath(py_file)}), skipping.")
             continue
-        
-        # Check if the main file exists (cross-platform)
-        main_file = os.path.join(module_dir, module_path.split(".")[-1] + ".py")
-        if not os.path.exists(main_file):
-            print(f"⚠️  Warning: {main_file} not found (checked: {os.path.abspath(main_file)}), skipping.")
-            continue
-            
-        print(f"✅ Found: {main_file}")
+        print(f"✅ Found: {py_file}")
         proc = start_service(module_path, args)
         if proc:
             procs.append(proc)
