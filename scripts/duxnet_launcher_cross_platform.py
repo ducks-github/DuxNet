@@ -30,6 +30,12 @@ def start_service(module_path, args):
 def main():
     print_banner()
     
+    # Change to the project root directory (parent of scripts/)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    os.chdir(project_root)
+    print(f"📁 Working directory: {os.getcwd()}")
+    
     # List of (module_path, args) for each service - updated for new structure
     SERVICES = [
         ("backend.duxnet_store.main", ["--config", "backend/duxnet_store/config.yaml"]),
@@ -47,19 +53,29 @@ def main():
         if not os.path.exists(module_dir):
             print(f"⚠️  Warning: {module_dir} not found, skipping.")
             continue
+        
+        # Check if the main file exists
+        main_file = os.path.join(module_dir, module_path.split(".")[-1] + ".py")
+        if not os.path.exists(main_file):
+            print(f"⚠️  Warning: {main_file} not found, skipping.")
+            continue
+            
+        print(f"✅ Found: {main_file}")
         proc = start_service(module_path, args)
         if proc:
             procs.append(proc)
             time.sleep(2)
 
     # Start the Desktop GUI
-    if os.path.exists("frontend/duxnet_desktop/desktop_manager.py"):
-        print("\n🖥️  Launching Desktop GUI...")
+    desktop_file = "frontend/duxnet_desktop/desktop_manager.py"
+    if os.path.exists(desktop_file):
+        print(f"\n🖥️  Launching Desktop GUI...")
+        print(f"✅ Found: {desktop_file}")
         gui_proc = start_service(DESKTOP_GUI[0], DESKTOP_GUI[1])
         if gui_proc:
             procs.append(gui_proc)
     else:
-        print("⚠️  Desktop GUI not found, skipping.")
+        print(f"⚠️  Desktop GUI not found: {desktop_file}")
 
     print(f"\n✅ All services started! ({len(procs)} processes running)")
     print("📋 Services:")
