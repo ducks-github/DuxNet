@@ -15,6 +15,7 @@ from frontend.duxnet_desktop.wallet_client import WalletClient
 
 
 def main():
+    print("Starting DuxNet Desktop Manager...")
     app = QApplication(sys.argv)
     api_client = StoreApiClient()
     wallet_client = WalletClient()
