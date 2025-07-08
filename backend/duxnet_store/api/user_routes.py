@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from duxnet_store.models import User
+from backend.duxnet_store.models import User
 import bcrypt
 import uuid
 from datetime import datetime
