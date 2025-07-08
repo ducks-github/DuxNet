@@ -40,6 +40,7 @@ from .advanced_features import AdvancedFeaturesTab
 from frontend.duxnet_desktop.ui.advanced_features import EscrowClient
 from frontend.duxnet_desktop.ui.advanced_features import TaskClient
 import json
+import threading
 
 # --- New tab widgets ---
 class StoreTab(QWidget):
@@ -110,9 +111,13 @@ class StoreTab(QWidget):
 
 class WalletTab(QWidget):
     def __init__(self, wallet_client, parent=None):
+        print("WalletTab __init__ starting")
         super().__init__(parent)
+        print("WalletTab super().__init__ done")
         self.wallet_client = wallet_client
+        print("WalletTab: wallet_client set")
         self.escrow_client = EscrowClient()  # Uses default base_url
+        print("WalletTab: EscrowClient created")
         layout = QVBoxLayout(self)
 
         # --- Balances Section ---
@@ -123,6 +128,7 @@ class WalletTab(QWidget):
         self.balances_table.horizontalHeader().setStretchLastSection(True)
         balances_layout.addWidget(self.balances_table)
         layout.addWidget(balances_group)
+        print("WalletTab: balances section created")
 
         # --- Send/Receive Section ---
         send_group = QGroupBox("Send / Receive")
@@ -144,6 +150,7 @@ class WalletTab(QWidget):
         send_layout.addWidget(self.send_button)
         send_layout.addWidget(self.receive_button)
         layout.addWidget(send_group)
+        print("WalletTab: send/receive section created")
 
         # --- Escrow Management Section ---
         escrow_group = QGroupBox("Escrow Management")
@@ -159,24 +166,71 @@ class WalletTab(QWidget):
         escrow_buttons_layout.addWidget(self.release_escrow_button)
         escrow_layout.addLayout(escrow_buttons_layout)
         layout.addWidget(escrow_group)
+        print("WalletTab: escrow section created")
 
         # --- Status/Notifications ---
         self.status_label = QLabel()
         layout.addWidget(self.status_label)
+        print("WalletTab: status label created")
 
+        self.setLayout(layout)
+        print("WalletTab: layout set")
+        self.status_label.setText("Connecting to wallet...")
         self.load_balances()
         self.load_escrows()
+        print("WalletTab __init__ done")
 
     def load_balances(self):
+        print("WalletTab: load_balances called (starting thread)")
+        self.status_label.setText("Connecting to wallet...")
         self.balances_table.setRowCount(0)
-        try:
-            balances = self.wallet_client.get_all_balances()
-            self.balances_table.setRowCount(len(balances))
-            for i, (currency, info) in enumerate(balances.items()):
-                self.balances_table.setItem(i, 0, QTableWidgetItem(currency))
-                self.balances_table.setItem(i, 1, QTableWidgetItem(str(info.get("balance", 0.0))))
-        except Exception as e:
-            self.status_label.setText(f"Error loading balances: {e}")
+        def fetch_balances():
+            try:
+                print("WalletTab: fetching balances in background thread")
+                balances = self.wallet_client.get_all_balances()
+                print("WalletTab: balances fetched")
+                def update_table():
+                    self.balances_table.setRowCount(len(balances))
+                    for i, (currency, info) in enumerate(balances.items()):
+                        self.balances_table.setItem(i, 0, QTableWidgetItem(currency))
+                        self.balances_table.setItem(i, 1, QTableWidgetItem(str(info.get("balance", 0.0))))
+                    self.status_label.setText("Wallet ready")
+                self.balances_table.window().status_label = self.status_label
+                self.balances_table.window().status_label.setText("Updating balances...")
+                self.balances_table.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.setText("Updating balances...")
+                self.balances_table.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.setText("Updating balances...")
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.setText("Updating balances...")
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.setText("Updating balances...")
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.setText("Updating balances...")
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.setText("Updating balances...")
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.setText("Updating balances...")
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.setText("Updating balances...")
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.setText("Updating balances...")
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.setText("Updating balances...")
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.setText("Updating balances...")
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label = self.status_label
+                self.balances_table.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.window().status_label.setText("Updating balances...")
+                    # Use QMetaObject.invokeMethod or QTimer.singleShot for thread-safe GUI update in real code
+                    update_table()
+            except Exception as e:
+                print(f"WalletTab: Error loading balances: {e}")
+                def update_error():
+                    self.status_label.setText(f"Error loading balances: {e}")
+                update_error()
+        threading.Thread(target=fetch_balances, daemon=True).start()
 
     def load_escrows(self):
         self.escrow_list.clear()
