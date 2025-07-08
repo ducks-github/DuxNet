@@ -17,10 +17,15 @@ from frontend.duxnet_desktop.wallet_client import WalletClient
 def main():
     print("Starting DuxNet Desktop Manager...")
     app = QApplication(sys.argv)
+    print("QApplication created")
     api_client = StoreApiClient()
+    print("StoreApiClient created")
     wallet_client = WalletClient()
+    print("WalletClient created")
     window = MainWindow(api_client, wallet_client)
+    print("MainWindow created")
     window.show()
+    print("Window shown, entering event loop")
     sys.exit(app.exec_())
 
 

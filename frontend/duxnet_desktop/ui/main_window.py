@@ -349,6 +349,7 @@ class SettingsTab(QWidget):
 
 class MainWindow(QMainWindow):
     def __init__(self, api_client, wallet_client=None, *args, **kwargs):
+        print("MainWindow __init__ starting")
         super().__init__(*args, **kwargs)
         self.api_client = api_client
         self.wallet_client = wallet_client
