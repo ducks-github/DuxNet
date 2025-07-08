@@ -351,41 +351,58 @@ class MainWindow(QMainWindow):
     def __init__(self, api_client, wallet_client=None, *args, **kwargs):
         print("MainWindow __init__ starting")
         super().__init__(*args, **kwargs)
+        print("super().__init__ done")
         self.api_client = api_client
+        print("api_client set")
         self.wallet_client = wallet_client
+        print("wallet_client set")
         self.current_user = None
         self.setWindowTitle("DuxOS API/App Store")
         self.resize(1200, 800)
+        print("Window title and size set")
 
         # --- Tabbed navigation ---
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
+        print("QTabWidget created and set as central widget")
 
         # Store tab
         self.store_tab = StoreTab(self.api_client)
+        print("StoreTab created")
         self.tabs.addTab(self.store_tab, "Store")
+        print("StoreTab added")
 
         # Wallet tab
         self.wallet_tab = WalletTab(self.wallet_client)
+        print("WalletTab created")
         self.tabs.addTab(self.wallet_tab, "Wallet")
+        print("WalletTab added")
 
         # Task Engine tab
         self.task_engine_tab = TaskEngineTab(self.api_client)
+        print("TaskEngineTab created")
         self.tabs.addTab(self.task_engine_tab, "Task Engine")
+        print("TaskEngineTab added")
 
         # Settings tab
         self.settings_tab = SettingsTab()
+        print("SettingsTab created")
         self.tabs.addTab(self.settings_tab, "Settings")
+        print("SettingsTab added")
 
         # Modernize look & feel
         self.apply_theme("default")
+        print("Theme applied")
         self.settings_tab.settings_widget.settings_changed.connect(self.handle_settings_changed)
+        print("Settings changed signal connected")
 
         # Setup menu bar
         self.setup_menu_bar()
+        print("Menu bar set up")
 
         # User account dock
         self.setup_user_account_dock()
+        print("User account dock set up")
 
     def apply_theme(self, theme):
         if theme == "dark":
