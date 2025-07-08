@@ -1,0 +1,7 @@
+requests
+pyyaml
+# Optional cryptocurrency libraries (install as needed)
+# bitcoinlib
+# web3
+# eth-account
+# xrpl-py 

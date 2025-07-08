@@ -1,0 +1,46 @@
+# Dux_OS GTK2 Theme
+
+gtk-theme-name = "duxos"
+gtk-color-scheme = "bg_color:#2d2d2d\nfg_color:#ffffff\nbase_color:#3c3c3c\nselected_bg_color:#4a90d9\nselected_fg_color:#ffffff\ntooltip_bg_color:#2d2d2d\ntooltip_fg_color:#ffffff"
+
+style "default" {
+    bg[NORMAL] = "#2d2d2d"
+    bg[PRELIGHT] = "#4a90d9"
+    bg[SELECTED] = "#4a90d9"
+    bg[INSENSITIVE] = "#1a1a1a"
+    fg[NORMAL] = "#ffffff"
+    fg[PRELIGHT] = "#ffffff"
+    fg[SELECTED] = "#ffffff"
+    fg[INSENSITIVE] = "#888888"
+    
+    base[NORMAL] = "#3c3c3c"
+    base[SELECTED] = "#4a90d9"
+    base[ACTIVE] = "#4a90d9"
+    text[NORMAL] = "#ffffff"
+    text[SELECTED] = "#ffffff"
+    text[ACTIVE] = "#ffffff"
+}
+
+style "button" {
+    xthickness = 2
+    ythickness = 2
+    bg[NORMAL] = "#4a90d9"
+    bg[PRELIGHT] = "#5ba0e9"
+    bg[ACTIVE] = "#357abd"
+    fg[NORMAL] = "#ffffff"
+    fg[PRELIGHT] = "#ffffff"
+    fg[ACTIVE] = "#ffffff"
+}
+
+style "entry" {
+    xthickness = 2
+    ythickness = 2
+    bg[NORMAL] = "#3c3c3c"
+    bg[ACTIVE] = "#4a90d9"
+    fg[NORMAL] = "#ffffff"
+    fg[ACTIVE] = "#ffffff"
+}
+
+widget_class "*" style "default"
+widget_class "GtkButton" style "button"
+widget_class "GtkEntry" style "entry"

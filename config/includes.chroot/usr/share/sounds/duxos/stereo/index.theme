@@ -1,0 +1,15 @@
+[Sound Theme]
+Name=Dux_OS Stereo
+Comment=Stereo sound theme for Dux_OS
+Inherits=freedesktop
+
+# Sound files
+message-new-instant.oga=message-new-instant.oga
+message.oga=message.oga
+notification.oga=notification.oga
+phone-incoming-call.oga=phone-incoming-call.oga
+phone-outgoing-busy.oga=phone-outgoing-busy.oga
+phone-outgoing-calling.oga=phone-outgoing-calling.oga
+service-login.oga=service-login.oga
+service-logout.oga=service-logout.oga
+window-attention.oga=window-attention.oga

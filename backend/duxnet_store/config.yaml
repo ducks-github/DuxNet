@@ -1,0 +1,19 @@
+# DuxNet Store Backend Default Configuration
+
+server:
+  host: 127.0.0.1
+  port: 8000
+  reload: false
+
+logging:
+  level: INFO
+  file: duxnet_store.log
+
+database:
+  url: sqlite:///duxnet_store.db
+
+security:
+  secret_key: "change_this_secret_key"
+  password_hash_rounds: 12
+
+# Add more configuration options as needed 

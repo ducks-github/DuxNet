@@ -1,0 +1,54 @@
+# DuxOS Wallet Configuration for Real Flopcoin Integration
+
+# Flopcoin Core RPC Configuration
+flopcoin:
+  rpc_host: "127.0.0.1"
+  rpc_port: 32553
+  rpc_user: "flopcoinrpc"
+  rpc_password: "password123"
+  timeout: 30
+  use_ssl: false
+
+# Wallet Configuration
+wallet:
+  name: "duxos_wallet"
+  description: "DuxOS Node Registry Wallet"
+  backup_enabled: true
+  backup_interval: 3600  # 1 hour
+  max_addresses: 1000
+
+# Transaction Configuration
+transactions:
+  default_fee: 0.001  # FLOP
+  min_fee: 0.0001
+  max_fee: 0.01
+  confirmations_required: 6
+  max_transaction_size: 1000000  # bytes
+
+# Security Configuration
+security:
+  encrypt_wallet: false  # Set to true for production
+  backup_encryption: false
+  max_failed_attempts: 3
+  lock_timeout: 300  # 5 minutes
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "wallet.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5
+
+# Network Configuration
+network:
+  testnet: false
+  regtest: false
+  mainnet: true
+
+# API Configuration (for registry integration)
+api:
+  enabled: true
+  host: "127.0.0.1"
+  port: 8000
+  cors_enabled: true
+  rate_limit: 100  # requests per minute 

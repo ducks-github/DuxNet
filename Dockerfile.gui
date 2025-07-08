@@ -1,0 +1,28 @@
+FROM python:3.10-slim
+
+# Install system dependencies for PyQt5 and X11
+RUN apt-get update && \
+    apt-get install -y \
+        libglib2.0-0 \
+        libxkbcommon-x11-0 \
+        libxcb-xinerama0 \
+        libxcb-icccm4 \
+        libxcb-image0 \
+        libxcb-keysyms1 \
+        libxcb-render-util0 \
+        libgl1-mesa-glx \
+        xauth \
+        xvfb \
+        && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install --no-cache-dir PyQt5 requests
+
+# Set workdir
+WORKDIR /app
+
+# Copy the desktop app code
+COPY duxnet_desktop/ ./duxnet_desktop/
+
+# Set the entrypoint to run the GUI app
+ENTRYPOINT ["python", "-m", "duxnet_desktop.desktop_manager"] 

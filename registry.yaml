@@ -1,0 +1,91 @@
+# Dux_OS Node Health Monitor Configuration
+health_monitor:
+  heartbeat_interval: 60  # seconds
+  max_missed_heartbeats: 3
+  poll_interval: 300  # seconds
+  retry_attempts: 2
+  retry_interval: 30  # seconds
+  health_history_retention: 604800  # 7 days
+  thresholds:
+    load_average: 0.8
+    min_memory_mb: 512
+    min_success_rate: 0.9
+    min_reputation_score: 0.5
+  alert_methods:
+    - log
+    - webhook: "https://example.com/alert"
+  node_id: "unique_node_identifier"
+  wallet_address: "node_wallet_address"
+  ip_address: "192.168.1.100"
+  port: 8080
+  log_file: "/var/log/duxnet/registry.log"
+  ipfs_endpoint: "http://localhost:5001"  # Placeholder for IPFS/DHT
+
+# Anti-Sybil Protection Settings
+anti_sybil:
+  proof_of_computation_required: true
+  task_result_verification: true
+  signature_verification: true
+  rate_limiting:
+    max_heartbeats_per_minute: 1
+    max_requests_per_minute: 60
+
+# Dynamic Thresholds (Governance Layer Integration)
+dynamic_thresholds:
+  enabled: true
+  governance_endpoint: "https://governance.duxos.net/api/thresholds"
+  update_interval: 3600  # 1 hour
+
+# Scalability Settings
+scalability:
+  batch_processing:
+    enabled: true
+    batch_size: 100
+    batch_timeout: 5  # seconds
+  ipfs_optimization:
+    compression: true
+    deduplication: true
+    cache_size_mb: 100
+
+# Error Handling
+error_handling:
+  exponential_backoff:
+    enabled: true
+    base_delay: 1  # seconds
+    max_delay: 300  # seconds
+    max_retries: 5
+  retry_logic:
+    ipfs_retries: 3
+    api_retries: 3
+
+# Security Settings
+security:
+  tls_enabled: true
+  cert_path: "/etc/duxnet/certs/registry.crt"
+  key_path: "/etc/duxnet/certs/registry.key"
+  signature_algorithm: "ed25519"
+  private_key_path: "/etc/duxnet/private_key.pem"
+
+# GUI Integration
+gui_integration:
+  websocket_endpoint: "ws://localhost:8080/ws"
+  real_time_updates: true
+  filter_options:
+    - "healthy"
+    - "unhealthy"
+    - "offline"
+    - "all"
+
+# Database Settings
+database:
+  type: "sqlite"  # or "postgresql"
+  uri: "sqlite:///var/lib/duxnet/health_monitor.db"
+  connection_pool_size: 10
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  rotation:
+    max_size_mb: 100
+    backup_count: 5 

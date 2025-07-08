@@ -1,0 +1,86 @@
+# DuxOS API/App Store Configuration
+
+# API Settings
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  cors_origins: ["*"]
+  rate_limit_per_minute: 100
+
+# Storage Settings
+storage:
+  path: "./store_metadata"
+  use_ipfs: false
+  backup_enabled: true
+  backup_interval_hours: 24
+  backup_retention_days: 7
+
+# Rating System
+rating:
+  min_reviews_for_weighted: 5
+  recency_weight_days: 30
+  confidence_boost_factor: 0.2
+  recency_boost_factor: 0.1
+
+# Search and Discovery
+search:
+  default_limit: 20
+  max_limit: 100
+  relevance_weights:
+    name_match: 10.0
+    description_match: 5.0
+    tag_match: 3.0
+    rating_boost: 0.5
+    popularity_boost: 5.0
+
+# Service Categories
+categories:
+  - api
+  - application
+  - machine_learning
+  - data_analysis
+  - image_processing
+  - text_processing
+  - blockchain
+  - utility
+  - custom
+
+# Integration Settings
+integration:
+  # Task Engine integration
+  task_engine_url: "http://localhost:8001"
+  task_engine_timeout: 30
+  
+  # Wallet integration
+  wallet_url: "http://localhost:8002"
+  wallet_timeout: 10
+  
+  # Registry integration
+  registry_url: "http://localhost:8003"
+  registry_timeout: 10
+  
+  # Escrow integration
+  escrow_url: "http://localhost:8004"
+  escrow_timeout: 15
+
+# Security Settings
+security:
+  api_key_required: false
+  rate_limiting_enabled: true
+  content_validation: true
+  max_file_size_mb: 10
+
+# Logging
+logging:
+  level: "INFO"
+  file: "./logs/store.log"
+  max_size_mb: 10
+  backup_count: 5
+
+# Performance
+performance:
+  cache_enabled: true
+  cache_ttl_seconds: 300
+  max_connections: 100
+  connection_timeout: 30 

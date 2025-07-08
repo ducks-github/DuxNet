@@ -1,0 +1,77 @@
+# DuxOS Desktop Environment Dependencies
+
+# Core GUI framework
+tkinter  # Usually comes with Python
+Pillow>=9.0.0  # For image processing
+
+# System monitoring
+psutil>=5.9.0
+
+# HTTP requests
+requests>=2.28.0
+
+# Desktop environment packages (system-level)
+# These are installed via apt in setup_desktop.py:
+# - xfce4
+# - xfce4-goodies
+# - lightdm
+# - lightdm-gtk-greeter
+# - python3-tk
+# - python3-psutil
+# - python3-requests
+# - htop
+# - gnome-terminal
+# - gnome-control-center
+# - file-roller
+# - gthumb
+# - firefox
+# - vlc
+
+# Optional: Additional GUI enhancements
+matplotlib>=3.5.0  # For charts and graphs
+seaborn>=0.11.0    # For statistical visualizations
+plotly>=5.0.0      # For interactive plots
+
+# Optional: System tray support
+pystray>=0.19.0    # For system tray icons
+Pillow>=9.0.0      # Required by pystray
+
+# Optional: Desktop notifications
+plyer>=2.1.0       # For cross-platform notifications
+
+# Optional: File management
+pathlib2>=2.3.0    # Enhanced path operations
+
+# Optional: Configuration management
+PyYAML>=6.0        # For configuration files
+configparser       # For INI-style configs
+
+# Optional: Logging and debugging
+colorlog>=6.7.0    # For colored console output
+
+# Core dependencies
+flask>=2.3.0
+pyyaml>=6.0
+requests>=2.31.0
+
+# Infrastructure components
+redis>=4.6.0
+prometheus-client>=0.17.0
+
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.11.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.11.0
+
+# Development
+mypy>=1.5.0
+black>=23.0.0
+flake8>=6.0.0
+
+# Optional: Production database drivers
+# psycopg2-binary>=2.9.0  # PostgreSQL
+# pymysql>=1.1.0  # MySQL 

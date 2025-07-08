@@ -1,0 +1,133 @@
+import logging
+import os
+from typing import Any, Dict, Optional, Tuple
+
+import requests
+import yaml
+
+# Ensure the log directory exists
+log_dir = os.path.expanduser("~/duxos_logs")
+os.makedirs(log_dir, exist_ok=True)
+
+# Set up structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler(os.path.join(log_dir, "wallet.log")), logging.StreamHandler()],
+)
+logger = logging.getLogger(__name__)
+
+
+class FlopcoinWallet:
+    def __init__(self, config_path: Optional[str] = None):
+        if config_path is None:
+            config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+        self.config: Dict[str, Any] = self._load_config(config_path)
+        self.rpc_url: str = f"http://{self.config['rpc']['host']}:{self.config['rpc']['port']}"
+        self.rpc_user: str = self.config["rpc"]["user"]
+        self.rpc_password: str = self.config["rpc"]["password"]
+        logger.info("FlopcoinWallet initialized.")
+
+    def _load_config(self, config_path: str) -> Dict[str, Any]:
+        try:
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f)
+            logger.info(f"Configuration loaded from {config_path}")
+            if isinstance(config, dict):
+                return config
+            else:
+                logger.error("Config file does not contain a dictionary")
+                raise ValueError("Invalid config format")
+        except FileNotFoundError:
+            logger.error(f"Config file not found at {config_path}")
+            raise
+        except yaml.YAMLError as e:
+            logger.error(f"Error parsing config file: {e}")
+            raise
+
+    def _make_rpc_call(
+        self, method: str, params: Optional[list] = None
+    ) -> Tuple[Optional[Any], Optional[str]]:
+        headers = {"content-type": "application/json"}
+        payload = {
+            "method": method,
+            "params": params if params is not None else [],
+            "jsonrpc": "2.0",
+            "id": 1,
+        }
+        try:
+            logger.info(f"Attempting RPC call: {method} with params: {params}")
+            response = requests.post(
+                self.rpc_url, json=payload, headers=headers, auth=(self.rpc_user, self.rpc_password)
+            )
+            response.raise_for_status()
+            rpc_response = response.json()
+            if rpc_response.get("error"):
+                logger.error(f"RPC Error for {method}: {rpc_response['error']}")
+                return None, rpc_response["error"]
+            logger.info(f"RPC call {method} successful.")
+            return rpc_response.get("result"), None
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Network error connecting to Flopcoin Core: {e}")
+            return None, f"Network error: {e}"
+        except requests.exceptions.Timeout:
+            logger.error("RPC call timed out.")
+            return None, "RPC call timed out."
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request error during RPC call: {e}")
+            return None, f"Request error: {e}"
+        except Exception as e:
+            logger.error(f"An unexpected error occurred during RPC call: {e}")
+            return None, f"Unexpected error: {e}"
+
+    def get_new_address(self) -> Optional[str]:
+        """Generate a new Flopcoin address."""
+        address, error = self._make_rpc_call("getnewaddress")
+        if error:
+            logger.warning(f"Failed to get new address: {error}")
+            return None
+        logger.info(f"Generated new address: {address}")
+        return address
+
+    def get_balance(self) -> Optional[float]:
+        """Retrieve the wallet's total balance."""
+        balance, error = self._make_rpc_call("getbalance")
+        if error:
+            logger.warning(f"Failed to get balance: {error}")
+            return None
+        logger.info(f"Retrieved balance: {balance}")
+        try:
+            return float(balance) if balance is not None else None
+        except (TypeError, ValueError):
+            logger.error(f"Balance value is not a float: {balance}")
+            return None
+
+    def get_wallet_info(self) -> Dict[str, Any]:
+        """Retrieve wallet info as a dictionary."""
+        result, error = self._make_rpc_call("getwalletinfo")
+        if error or not isinstance(result, dict):
+            logger.warning(f"Failed to get wallet info: {error}")
+            return {}
+        return {str(k): v for k, v in result.items()}
+
+    def send_to_address(self, address: str, amount: float) -> Tuple[Optional[str], Optional[str]]:
+        """Send Flop Coin to a specified address."""
+        if not isinstance(address, str) or not address:
+            logger.error("Invalid input: Address must be a non-empty string.")
+            return None, "Invalid address"
+        if not isinstance(amount, (int, float)) or amount <= 0:
+            logger.error("Invalid input: Amount must be a positive number.")
+            return None, "Invalid amount"
+
+        # Round amount to 2 decimal places
+        rounded_amount = round(amount, 2)
+        logger.info(f"Attempting to send {rounded_amount} Flop Coin to {address}")
+
+        # Bitcoin Core's sendtoaddress typically takes address, amount, comment, comment_to
+        # We'll use just address and amount as per prompt.
+        txid, error = self._make_rpc_call("sendtoaddress", [address, rounded_amount])
+        if error:
+            logger.error(f"Failed to send {rounded_amount} Flop Coin to {address}: {error}")
+            return None, error
+        logger.info(f"Transaction successful! TXID: {txid}")
+        return txid, None

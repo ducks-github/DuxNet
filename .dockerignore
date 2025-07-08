@@ -1,0 +1,71 @@
+# Ignore system and temporary files
+*.swp
+*.swo
+*.tmp
+*~
+.DS_Store
+Thumbs.db
+
+# Ignore version control directories
+.git
+.gitignore
+
+# Ignore Python cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+ENV/
+
+# Ignore build and distribution directories
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Ignore node modules
+node_modules/
+
+# Ignore OS-specific files
+*.bak
+
+# Ignore Docker files
+Dockerfile*
+.dockerignore
+
+debian/
+iso/
+*.iso
+*.img
+*.qcow2
+*.vdi
+*.vmdk
+*.box
+*.ova
+*.ovf
+*.tar
+*.tar.gz
+*.tar.xz
+*.zip
+*.7z
+*.rar
+*.log
+*.out
+*.pid
+*.sock
+*.db
+*.sqlite
+*.sqlite3
+*.log.*
+*.core
+*.pid.*
+*.seed
+*.swp
+*.swo
+*.tmp
+*~
+
+build-workspace/
+Dux_OS.iso 

@@ -1,0 +1,50 @@
+name: DuxOS Python CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install Poetry
+      run: |
+        pip install poetry
+        poetry config virtualenvs.create false
+    
+    - name: Install dependencies
+      run: |
+        poetry install
+        pip install -r tests/requirements.txt
+    
+    - name: Run type checking
+      run: mypy duxos
+    
+    - name: Run linting
+      run: |
+        flake8 duxos tests
+        black --check duxos tests
+    
+    - name: Run tests with coverage
+      run: |
+        pytest --cov=duxos --cov-report=xml tests/
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true 
