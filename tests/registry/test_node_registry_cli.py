@@ -1,11 +1,13 @@
 import os
 import tempfile
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from duxos.registry.cli import NodeRegistryCLI
 from duxos.registry.models.node import Node, NodeCapabilities
 from duxos.registry.services.node_registry import NodeRegistry
+
 
 class TestNodeRegistryCLI:
     @pytest.fixture
@@ -56,7 +58,7 @@ class TestNodeRegistryCLI:
         register_args.duxos_version = "0.1.0"
 
         cli.register_node(register_args)
-        
+
         # Get the node ID from the output
         captured = capsys.readouterr()
         node_id = captured.out.split("Node ID: ")[1].strip()
@@ -80,7 +82,7 @@ class TestNodeRegistryCLI:
                 "cpu_cores": 16,
                 "memory_gb": 64.0,
                 "storage_gb": 2000.0,
-                "gpu_enabled": True
+                "gpu_enabled": True,
             },
             {
                 "wallet_address": "0x2222bbbb",
@@ -89,8 +91,8 @@ class TestNodeRegistryCLI:
                 "cpu_cores": 2,
                 "memory_gb": 4.0,
                 "storage_gb": 100.0,
-                "gpu_enabled": False
-            }
+                "gpu_enabled": False,
+            },
         ]
 
         for node_info in nodes_data:
@@ -118,7 +120,7 @@ class TestNodeRegistryCLI:
 
         cli.list_nodes(list_args)
         captured = capsys.readouterr()
-        
+
         # Verify that only high-performance node is listed
         assert "high-performance-node" in captured.out
         assert "low-performance-node" not in captured.out
@@ -138,7 +140,7 @@ class TestNodeRegistryCLI:
         register_args.duxos_version = "0.1.0"
 
         cli.register_node(register_args)
-        
+
         # Get the node ID
         captured = capsys.readouterr()
         node_id = captured.out.split("Node ID: ")[1].strip()
@@ -169,7 +171,7 @@ class TestNodeRegistryCLI:
         register_args.duxos_version = "0.1.0"
 
         cli.register_node(register_args)
-        
+
         # Get the node ID
         captured = capsys.readouterr()
         node_id = captured.out.split("Node ID: ")[1].strip()
@@ -181,4 +183,4 @@ class TestNodeRegistryCLI:
 
         cli.update_node_reputation(rep_args)
         captured = capsys.readouterr()
-        assert f"Reputation updated for node {node_id}" in captured.out 
+        assert f"Reputation updated for node {node_id}" in captured.out

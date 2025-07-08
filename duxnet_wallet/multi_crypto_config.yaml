@@ -1,0 +1,123 @@
+# Multi-Cryptocurrency Wallet Configuration for DuxNet
+
+# Global settings
+global:
+  default_currency: "BTC"
+  testnet_mode: true
+  log_level: "INFO"
+  backup_enabled: true
+  backup_interval: 3600  # seconds
+
+# Cryptocurrency configurations
+currencies:
+  BTC:
+    enabled: false  # Disabled for now due to network issues
+    currency_symbol: "BTC"
+    network: "testnet"  # mainnet or testnet
+    wallet_name: "duxnet_bitcoin_wallet"
+    db_uri: "sqlite:///duxnet_bitcoin_wallet.db"
+    private_key: null  # Set to private key for existing wallet
+    fee_strategy: "medium"  # low, medium, high
+    confirmations_required: 1
+    
+  ETH:
+    enabled: true
+    currency_symbol: "ETH"
+    network: "testnet"  # mainnet or testnet
+    rpc_url: "http://localhost:8545"
+    private_key: null  # Set to private key for existing wallet
+    gas_limit: 21000
+    gas_strategy: "medium"  # low, medium, high
+    confirmations_required: 12
+    
+  USDT:
+    enabled: false
+    currency_symbol: "USDT"
+    network: "mainnet"
+    contract_address: "0xdAC17F958D2ee523a2206206994597C13D831ec7"  # Ethereum USDT
+    rpc_url: "https://mainnet.infura.io/v3/YOUR_PROJECT_ID"
+    private_key: null
+    
+  BNB:
+    enabled: false
+    currency_symbol: "BNB"
+    network: "testnet"
+    rpc_url: "https://data-seed-prebsc-1-s1.binance.org:8545/"
+    private_key: null
+    gas_limit: 21000
+    
+  XRP:
+    enabled: false
+    currency_symbol: "XRP"
+    network: "testnet"
+    server_url: "wss://s.altnet.rippletest.net:51233"
+    private_key: null
+    
+  SOL:
+    enabled: false
+    currency_symbol: "SOL"
+    network: "devnet"
+    rpc_url: "https://api.devnet.solana.com"
+    private_key: null
+    
+  ADA:
+    enabled: false
+    currency_symbol: "ADA"
+    network: "testnet"
+    node_url: "https://testnet.cardano.org"
+    private_key: null
+    
+  DOGE:
+    enabled: false
+    currency_symbol: "DOGE"
+    network: "testnet"
+    rpc_url: "http://localhost:22555"
+    username: "dogecoinrpc"
+    password: "your_password"
+    
+  TON:
+    enabled: false
+    currency_symbol: "TON"
+    network: "testnet"
+    endpoint: "https://testnet.toncenter.com/api/v2/jsonRPC"
+    api_key: "YOUR_API_KEY"
+    
+  TRX:
+    enabled: false
+    currency_symbol: "TRX"
+    network: "testnet"
+    rpc_url: "https://api.shasta.trongrid.io"
+    private_key: null
+
+# Security settings
+security:
+  encryption_enabled: true
+  key_derivation_iterations: 100000
+  session_timeout: 3600  # seconds
+  max_failed_attempts: 3
+  lockout_duration: 300  # seconds
+
+# API settings
+api:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8003
+  rate_limit: 100  # requests per minute
+  cors_enabled: true
+  api_key_required: false
+
+# Monitoring settings
+monitoring:
+  health_check_interval: 300  # seconds
+  balance_check_interval: 60  # seconds
+  transaction_monitoring: true
+  alert_on_low_balance: true
+  low_balance_threshold: 0.001
+
+# Backup settings
+backup:
+  auto_backup: true
+  backup_location: "./backups/"
+  max_backups: 10
+  backup_format: "json"
+  encryption_enabled: true 

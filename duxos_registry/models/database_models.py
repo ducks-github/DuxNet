@@ -1,17 +1,30 @@
-from sqlalchemy import Column, String, Float, DateTime, Boolean, Text, ForeignKey, Table, Integer
+import json
+from typing import Any, Dict, List
+
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Text,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from ..db.database import Base
-import json
-from typing import List, Dict, Any
 
 # Association table for node-capability many-to-many relationship
 node_capabilities = Table(
-    'node_capabilities',
+    "node_capabilities",
     Base.metadata,
-    Column('node_id', String, ForeignKey('nodes.node_id'), primary_key=True),
-    Column('capability_name', String, ForeignKey('capabilities.name'), primary_key=True)
+    Column("node_id", String, ForeignKey("nodes.node_id"), primary_key=True),
+    Column("capability_name", String, ForeignKey("capabilities.name"), primary_key=True),
 )
+
 
 class Node(Base):
     __tablename__ = "nodes"
@@ -40,7 +53,8 @@ class Node(Base):
 
     def set_metadata(self, metadata: Dict[str, Any]):
         """Set metadata from dictionary"""
-        setattr(self, 'node_metadata', json.dumps(metadata))
+        setattr(self, "node_metadata", json.dumps(metadata))
+
 
 class Capability(Base):
     __tablename__ = "capabilities"
@@ -53,6 +67,7 @@ class Capability(Base):
 
     # Relationships
     nodes = relationship("Node", secondary=node_capabilities, back_populates="capabilities")
+
 
 class ReputationEvent(Base):
     __tablename__ = "reputation_events"
@@ -78,7 +93,7 @@ class ReputationEvent(Base):
 
     def set_metadata(self, metadata: Dict[str, Any]):
         """Set metadata from dictionary"""
-        setattr(self, 'event_metadata', json.dumps(metadata))
+        setattr(self, "event_metadata", json.dumps(metadata))
 
 
 # Wallet-related models
@@ -130,4 +145,4 @@ class WalletCapability(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    node = relationship("Node", backref="wallet_capabilities") 
+    node = relationship("Node", backref="wallet_capabilities")

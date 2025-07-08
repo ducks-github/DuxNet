@@ -2,7 +2,7 @@ rpc:
   host: 127.0.0.1
   port: 32553
   user: flopcoinrpc
-  password: your_secure_password
+  password: test
 wallet:
   encryption: true
   backup_interval: 3600

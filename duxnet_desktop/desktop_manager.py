@@ -6,10 +6,12 @@ Launches the main window for the DuxOS API/App Store desktop application.
 """
 
 import sys
+
 from PyQt5.QtWidgets import QApplication
+
 from duxnet_desktop.api_client import StoreApiClient
-from duxnet_desktop.wallet_client import WalletClient
 from duxnet_desktop.ui.main_window import MainWindow
+from duxnet_desktop.wallet_client import WalletClient
 
 
 def main():
@@ -22,4 +24,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

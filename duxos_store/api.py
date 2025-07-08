@@ -5,16 +5,24 @@ REST API layer for the DuxOS API/App Store using FastAPI.
 Provides endpoints for service management, search, reviews, and discovery.
 """
 
-from fastapi import FastAPI, HTTPException, Depends, Query, Path
+from typing import Any, Dict, List, Optional
+
+import uvicorn
+from fastapi import Depends, FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
-import uvicorn
 
-from .store_service import StoreService
-from .rating_system import RatingSystem
 from .metadata_storage import MetadataStorage
-from .models import Service, Review, Rating, ServiceCategory, ServiceStatus, SearchFilter
+from .models import (
+    Rating,
+    Review,
+    SearchFilter,
+    Service,
+    ServiceCategory,
+    ServiceStatus,
+)
+from .rating_system import RatingSystem
+from .store_service import StoreService
 
 
 # Pydantic models for API requests/responses
@@ -159,15 +167,15 @@ class StatisticsResponse(BaseModel):
 
 class StoreAPI:
     """FastAPI application for the store"""
-    
+
     def __init__(self, store_service: StoreService):
         self.store_service = store_service
         self.app = FastAPI(
             title="DuxOS API/App Store",
             description="Decentralized marketplace for APIs and applications",
-            version="1.0.0"
+            version="1.0.0",
         )
-        
+
         # Add CORS middleware
         self.app.add_middleware(
             CORSMiddleware,
@@ -176,83 +184,83 @@ class StoreAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
-        
+
         self._setup_routes()
-    
-    def _setup_routes(self):
+
+    def _setup_routes(self) -> None:
         """Setup API routes"""
-        
+
         @self.app.get("/", response_model=Dict[str, str])
-        async def root():
+        async def root() -> Dict[str, str]:
             """Root endpoint"""
             return {"message": "DuxOS API/App Store", "version": "1.0.0"}
-        
+
         @self.app.post("/services", response_model=ServiceResponse)
         async def create_service(
             request: ServiceCreateRequest,
             owner_id: str = Query(..., description="Service owner ID"),
-            owner_name: str = Query(..., description="Service owner name")
-        ):
+            owner_name: str = Query(..., description="Service owner name"),
+        ) -> ServiceResponse:
             """Create a new service"""
             try:
                 service_data = request.dict()
                 service_data["category"] = request.category
-                
+
                 service = self.store_service.register_service(service_data, owner_id, owner_name)
                 return ServiceResponse(**service.to_dict())
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-        
+
         @self.app.get("/services/{service_id}", response_model=ServiceResponse)
-        async def get_service(service_id: str = Path(..., description="Service ID")):
+        async def get_service(service_id: str = Path(..., description="Service ID")) -> ServiceResponse:
             """Get a service by ID"""
             service = self.store_service.get_service(service_id)
             if not service:
                 raise HTTPException(status_code=404, detail="Service not found")
             return ServiceResponse(**service.to_dict())
-        
+
         @self.app.put("/services/{service_id}", response_model=ServiceResponse)
         async def update_service(
             request: ServiceUpdateRequest,
             service_id: str = Path(..., description="Service ID"),
-            owner_id: str = Query(..., description="Service owner ID")
-        ):
+            owner_id: str = Query(..., description="Service owner ID"),
+        ) -> ServiceResponse:
             """Update a service"""
             if not request:
                 raise HTTPException(status_code=400, detail="Request body required")
-            
+
             # Filter out None values
             updates = {k: v for k, v in request.dict().items() if v is not None}
-            
+
             service = self.store_service.update_service(service_id, updates, owner_id)
             if not service:
                 raise HTTPException(status_code=404, detail="Service not found or access denied")
             return ServiceResponse(**service.to_dict())
-        
+
         @self.app.post("/services/{service_id}/publish", response_model=ServiceResponse)
         async def publish_service(
             service_id: str = Path(..., description="Service ID"),
-            owner_id: str = Query(..., description="Service owner ID")
-        ):
+            owner_id: str = Query(..., description="Service owner ID"),
+        ) -> ServiceResponse:
             """Publish a service"""
             service = self.store_service.publish_service(service_id, owner_id)
             if not service:
                 raise HTTPException(status_code=404, detail="Service not found or access denied")
             return ServiceResponse(**service.to_dict())
-        
+
         @self.app.post("/services/{service_id}/suspend", response_model=ServiceResponse)
         async def suspend_service(
             service_id: str = Path(..., description="Service ID"),
-            owner_id: str = Query(..., description="Service owner ID")
-        ):
+            owner_id: str = Query(..., description="Service owner ID"),
+        ) -> ServiceResponse:
             """Suspend a service"""
             service = self.store_service.suspend_service(service_id, owner_id)
             if not service:
                 raise HTTPException(status_code=404, detail="Service not found or access denied")
             return ServiceResponse(**service.to_dict())
-        
+
         @self.app.get("/services", response_model=SearchResponse)
         async def search_services(
             query: str = Query(default=""),
@@ -265,8 +273,8 @@ class StoreAPI:
             sort_by: str = Query(default="relevance"),
             sort_order: str = Query(default="desc"),
             limit: int = Query(default=20, ge=1, le=100),
-            offset: int = Query(default=0, ge=0)
-        ):
+            offset: int = Query(default=0, ge=0),
+        ) -> SearchResponse:
             """Search and filter services"""
             try:
                 search_filter = SearchFilter(
@@ -280,25 +288,25 @@ class StoreAPI:
                     sort_by=sort_by,
                     sort_order=sort_order,
                     limit=limit,
-                    offset=offset
+                    offset=offset,
                 )
-                
+
                 services, total_count = self.store_service.search_services(search_filter)
-                
+
                 return SearchResponse(
                     services=[ServiceResponse(**service.to_dict()) for service in services],
                     total_count=total_count,
                     limit=limit,
-                    offset=offset
+                    offset=offset,
                 )
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
-        
+
         @self.app.get("/services/owner/{owner_id}", response_model=List[ServiceResponse])
         async def get_services_by_owner(
             owner_id: str = Path(..., description="Owner ID"),
-            status: Optional[str] = Query(None, description="Service status filter")
-        ):
+            status: Optional[str] = Query(None, description="Service status filter"),
+        ) -> List[ServiceResponse]:
             """Get all services by an owner"""
             try:
                 service_status = ServiceStatus(status) if status else None
@@ -306,12 +314,11 @@ class StoreAPI:
                 return [ServiceResponse(**service.to_dict()) for service in services]
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
-        
+
         @self.app.get("/services/popular", response_model=List[ServiceResponse])
         async def get_popular_services(
-            limit: int = Query(default=10, ge=1, le=50),
-            category: Optional[str] = Query(None)
-        ):
+            limit: int = Query(default=10, ge=1, le=50), category: Optional[str] = Query(None)
+        ) -> List[ServiceResponse]:
             """Get popular services"""
             try:
                 service_category = ServiceCategory(category) if category else None
@@ -319,115 +326,114 @@ class StoreAPI:
                 return [ServiceResponse(**service.to_dict()) for service in services]
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
-        
+
         @self.app.get("/services/recent", response_model=List[ServiceResponse])
-        async def get_recent_services(limit: int = Query(default=10, ge=1, le=50)):
+        async def get_recent_services(limit: int = Query(default=10, ge=1, le=50)) -> List[ServiceResponse]:
             """Get recently published services"""
             services = self.store_service.get_recent_services(limit)
             return [ServiceResponse(**service.to_dict()) for service in services]
-        
+
         @self.app.post("/services/{service_id}/reviews", response_model=ReviewResponse)
         async def create_review(
             request: ReviewCreateRequest,
             service_id: str = Path(..., description="Service ID"),
             user_id: str = Query(..., description="User ID"),
-            user_name: str = Query(..., description="User name")
-        ):
+            user_name: str = Query(..., description="User name"),
+        ) -> ReviewResponse:
             """Create a review for a service"""
             if not request:
                 raise HTTPException(status_code=400, detail="Request body required")
-            
+
             try:
                 review = self.store_service.add_review(
-                    service_id, user_id, user_name,
-                    request.rating, request.title, request.content
+                    service_id, user_id, user_name, request.rating, request.title, request.content
                 )
                 if not review:
                     raise HTTPException(status_code=404, detail="Service not found")
                 return ReviewResponse(**review.to_dict())
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
-        
+
         @self.app.get("/services/{service_id}/reviews", response_model=List[ReviewResponse])
         async def get_service_reviews(
             service_id: str = Path(..., description="Service ID"),
             limit: int = Query(default=20, ge=1, le=100),
             offset: int = Query(default=0, ge=0),
-            sort_by: str = Query(default="date", description="date, rating, helpful")
-        ):
+            sort_by: str = Query(default="date", description="date, rating, helpful"),
+        ) -> List[ReviewResponse]:
             """Get reviews for a service"""
             reviews = self.store_service.get_reviews(service_id, limit, offset)
             return [ReviewResponse(**review.to_dict()) for review in reviews]
-        
+
         @self.app.get("/services/{service_id}/rating", response_model=RatingResponse)
-        async def get_service_rating(service_id: str = Path(..., description="Service ID")):
+        async def get_service_rating(service_id: str = Path(..., description="Service ID")) -> RatingResponse:
             """Get rating statistics for a service"""
             rating = self.store_service.get_rating(service_id)
             if not rating:
                 raise HTTPException(status_code=404, detail="Rating not found")
             return RatingResponse(**rating.to_dict())
-        
+
         @self.app.post("/services/{service_id}/reviews/{review_id}/helpful")
         async def vote_review_helpful(
             service_id: str = Path(..., description="Service ID"),
             review_id: str = Path(..., description="Review ID"),
-            user_id: str = Query(..., description="User ID")
-        ):
+            user_id: str = Query(..., description="User ID"),
+        ) -> Dict[str, str]:
             """Vote a review as helpful"""
             success = self.store_service.rating_system.vote_review_helpful(review_id, user_id)
             if not success:
                 raise HTTPException(status_code=400, detail="Unable to vote review")
             return {"message": "Vote recorded successfully"}
-        
+
         @self.app.get("/users/{user_id}/reviews", response_model=List[ReviewResponse])
         async def get_user_reviews(
             user_id: str = Path(..., description="User ID"),
             limit: int = Query(default=20, ge=1, le=100),
-            offset: int = Query(default=0, ge=0)
-        ):
+            offset: int = Query(default=0, ge=0),
+        ) -> List[ReviewResponse]:
             """Get all reviews by a user"""
             reviews = self.store_service.rating_system.get_user_reviews(user_id, limit, offset)
             return [ReviewResponse(**review.to_dict()) for review in reviews]
-        
+
         @self.app.get("/users/{user_id}/favorites", response_model=List[ServiceResponse])
-        async def get_user_favorites(user_id: str = Path(..., description="User ID")):
+        async def get_user_favorites(user_id: str = Path(..., description="User ID")) -> List[ServiceResponse]:
             """Get user's favorite services"""
             services = self.store_service.get_favorites(user_id)
             return [ServiceResponse(**service.to_dict()) for service in services]
-        
+
         @self.app.post("/services/{service_id}/favorite")
         async def toggle_favorite(
             service_id: str = Path(..., description="Service ID"),
-            user_id: str = Query(..., description="User ID")
-        ):
+            user_id: str = Query(..., description="User ID"),
+        ) -> Dict[str, bool]:
             """Toggle favorite status for a service"""
             is_favorite = self.store_service.toggle_favorite(service_id, user_id)
             return {"is_favorite": is_favorite}
-        
+
         @self.app.post("/services/{service_id}/usage")
         async def record_usage(
             service_id: str = Path(..., description="Service ID"),
             user_id: str = Query(..., description="User ID"),
-            call_cost: float = Query(default=0.0, ge=0.0, description="Cost of the call")
-        ):
+            call_cost: float = Query(default=0.0, ge=0.0, description="Cost of the call"),
+        ) -> Dict[str, str]:
             """Record service usage"""
             usage = self.store_service.record_service_usage(service_id, user_id, call_cost)
             if not usage:
                 raise HTTPException(status_code=404, detail="Service not found")
             return {"message": "Usage recorded successfully"}
-        
+
         @self.app.get("/statistics", response_model=StatisticsResponse)
-        async def get_statistics():
+        async def get_statistics() -> StatisticsResponse:
             """Get store statistics"""
             stats = self.store_service.get_service_statistics()
             return StatisticsResponse(**stats)
-        
+
         @self.app.get("/categories", response_model=List[str])
-        async def get_categories():
+        async def get_categories() -> List[str]:
             """Get available service categories"""
             return [category.value for category in ServiceCategory]
-    
-    def run(self, host: str = "0.0.0.0", port: int = 8000, debug: bool = False):
+
+    def run(self, host: str = "0.0.0.0", port: int = 8000, debug: bool = False) -> None:
         """Run the API server"""
         uvicorn.run(self.app, host=host, port=port, reload=debug)
 
@@ -435,4 +441,4 @@ class StoreAPI:
 # Factory function to create the API
 def create_store_api(store_service: StoreService) -> StoreAPI:
     """Create a store API instance"""
-    return StoreAPI(store_service) 
+    return StoreAPI(store_service)

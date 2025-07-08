@@ -1,10 +1,12 @@
+import json
 import os
 import tempfile
-import json
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
+
 from duxos.registry.cli import NodeRegistryCLI
+
 
 class TestNodeRegistryCLIIntegration:
     @pytest.fixture
@@ -40,7 +42,7 @@ class TestNodeRegistryCLIIntegration:
         # Register node
         cli.register_node(args)
         captured = capsys.readouterr()
-        
+
         # Verify registration
         assert "Node registered successfully" in captured.out
         assert "Node ID:" in captured.out
@@ -56,7 +58,7 @@ class TestNodeRegistryCLIIntegration:
                 "cpu_cores": 16,
                 "memory_gb": 64.0,
                 "storage_gb": 2000.0,
-                "gpu_enabled": True
+                "gpu_enabled": True,
             },
             {
                 "wallet_address": "FLOP22222BBBBB",
@@ -65,8 +67,8 @@ class TestNodeRegistryCLIIntegration:
                 "cpu_cores": 2,
                 "memory_gb": 4.0,
                 "storage_gb": 100.0,
-                "gpu_enabled": False
-            }
+                "gpu_enabled": False,
+            },
         ]
 
         for node_info in nodes_data:
@@ -94,7 +96,7 @@ class TestNodeRegistryCLIIntegration:
 
         cli.list_nodes(list_args)
         captured = capsys.readouterr()
-        
+
         # Verify that only high-performance node is listed
         assert "high-performance-node" in captured.out
         assert "low-performance-node" not in captured.out
@@ -114,7 +116,7 @@ class TestNodeRegistryCLIIntegration:
         register_args.duxos_version = "0.1.0"
 
         cli.register_node(register_args)
-        
+
         # Get the node ID from the output
         captured = capsys.readouterr()
         node_id = captured.out.split("Node ID: ")[1].strip()
@@ -125,12 +127,12 @@ class TestNodeRegistryCLIIntegration:
 
         cli.get_node(get_args)
         captured = capsys.readouterr()
-        
+
         # Verify node details
         node_data = json.loads(captured.out)
-        assert node_data['wallet_address'] == 'FLOP99999CCCCC'
-        assert node_data['ip_address'] == '192.168.1.104'
-        assert node_data['hostname'] == 'get-test-node'
+        assert node_data["wallet_address"] == "FLOP99999CCCCC"
+        assert node_data["ip_address"] == "192.168.1.104"
+        assert node_data["hostname"] == "get-test-node"
 
     def test_update_node_health_integration(self, cli, capsys):
         """Test updating node health via CLI."""
@@ -147,7 +149,7 @@ class TestNodeRegistryCLIIntegration:
         register_args.duxos_version = "0.1.0"
 
         cli.register_node(register_args)
-        
+
         # Get the node ID from the output
         captured = capsys.readouterr()
         node_id = captured.out.split("Node ID: ")[1].strip()
@@ -161,6 +163,6 @@ class TestNodeRegistryCLIIntegration:
 
         cli.update_node_health(health_args)
         captured = capsys.readouterr()
-        
+
         # Verify health update
-        assert f"Health metrics updated for node {node_id}" in captured.out 
+        assert f"Health metrics updated for node {node_id}" in captured.out

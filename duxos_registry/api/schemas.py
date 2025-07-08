@@ -1,14 +1,18 @@
-from pydantic import BaseModel
 from typing import List
+
+from pydantic import BaseModel
+
 
 class NodeRegisterRequest(BaseModel):
     node_id: str
     address: str
     capabilities: list[str]
 
+
 class NodeRegisterResponse(BaseModel):
     success: bool
     message: str
+
 
 class NodeInfo(BaseModel):
     node_id: str
@@ -17,13 +21,16 @@ class NodeInfo(BaseModel):
     status: str
     reputation: float
 
+
 class NodeListResponse(BaseModel):
     nodes: List[NodeInfo]
+
 
 class ReputationUpdateRequest(BaseModel):
     node_id: str
     event_type: str
     custom_delta: float | None = None
+
 
 class ReputationUpdateResponse(BaseModel):
     success: bool
@@ -36,18 +43,22 @@ class ReputationUpdateResponse(BaseModel):
     rule_applied: bool | None = None
     error: str | None = None
 
+
 # Capability Management Schemas
 class CapabilityAddRequest(BaseModel):
     node_id: str
     new_capabilities: list[str]
 
+
 class CapabilityRemoveRequest(BaseModel):
     node_id: str
     capabilities_to_remove: list[str]
 
+
 class CapabilityUpdateRequest(BaseModel):
     node_id: str
     new_capabilities: list[str]
+
 
 class CapabilityResponse(BaseModel):
     success: bool
@@ -58,9 +69,11 @@ class CapabilityResponse(BaseModel):
     removed_capabilities: list[str] | None = None
     error: str | None = None
 
+
 class CapabilityQueryRequest(BaseModel):
     capabilities: list[str]
     match_all: bool = False
+
 
 class CapabilityStatisticsResponse(BaseModel):
     total_nodes: int
@@ -69,6 +82,7 @@ class CapabilityStatisticsResponse(BaseModel):
     most_common_capabilities: list[tuple[str, int]]
     standard_capabilities: list[str]
     custom_capabilities: list[str]
+
 
 class AvailableCapabilitiesResponse(BaseModel):
     capabilities: list[str]
@@ -80,10 +94,12 @@ class WalletCreateRequest(BaseModel):
     wallet_name: str
     auth_data: dict | None = None
 
+
 class WalletCreateResponse(BaseModel):
     success: bool
     message: str
     wallet: dict | None = None
+
 
 class WalletInfo(BaseModel):
     id: int
@@ -96,6 +112,7 @@ class WalletInfo(BaseModel):
     created_at: str | None = None
     updated_at: str | None = None
 
+
 class WalletBalanceResponse(BaseModel):
     success: bool
     node_id: str
@@ -105,11 +122,13 @@ class WalletBalanceResponse(BaseModel):
     currency: str
     message: str | None = None
 
+
 class TransactionSendRequest(BaseModel):
     node_id: str
     recipient_address: str
     amount: float
     auth_data: dict | None = None
+
 
 class TransactionSendResponse(BaseModel):
     success: bool
@@ -118,6 +137,7 @@ class TransactionSendResponse(BaseModel):
     recipient: str | None = None
     transaction: dict | None = None
     message: str | None = None
+
 
 class TransactionInfo(BaseModel):
     id: int
@@ -129,6 +149,7 @@ class TransactionInfo(BaseModel):
     status: str
     created_at: str | None = None
 
+
 class TransactionHistoryResponse(BaseModel):
     success: bool
     node_id: str
@@ -136,9 +157,10 @@ class TransactionHistoryResponse(BaseModel):
     transactions: list[TransactionInfo]
     message: str | None = None
 
+
 class NewAddressResponse(BaseModel):
     success: bool
     node_id: str
     new_address: str | None = None
     wallet_name: str | None = None
-    message: str | None = None 
+    message: str | None = None

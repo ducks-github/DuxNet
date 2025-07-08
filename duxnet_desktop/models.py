@@ -5,7 +5,8 @@ Defines data models for services, reviews, and users for use in the desktop app.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
 
 @dataclass
 class ServiceModel:
@@ -42,6 +43,7 @@ class ServiceModel:
     published_at: Optional[str]
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class ReviewModel:
     review_id: str
@@ -56,6 +58,7 @@ class ReviewModel:
     created_at: str
     updated_at: str
 
+
 @dataclass
 class UserModel:
     user_id: str
@@ -63,4 +66,4 @@ class UserModel:
     wallet_address: Optional[str] = None
     balance: Optional[float] = None
     favorites: List[str] = field(default_factory=list)
-    purchase_history: List[str] = field(default_factory=list) 
+    purchase_history: List[str] = field(default_factory=list)

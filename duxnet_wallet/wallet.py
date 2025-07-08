@@ -1,7 +1,8 @@
-import requests
-import yaml
 import logging
 import os
+
+import requests
+import yaml
 
 # Ensure the log directory exists
 log_dir = os.path.expanduser("~/duxnet_logs")
@@ -10,27 +11,25 @@ os.makedirs(log_dir, exist_ok=True)
 # Set up structured logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(os.path.join(log_dir, "wallet.log")),
-        logging.StreamHandler()
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler(os.path.join(log_dir, "wallet.log")), logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
+
 
 class FlopcoinWallet:
     def __init__(self, config_path=None):
         if config_path is None:
-            config_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
+            config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
         self.config = self._load_config(config_path)
         self.rpc_url = f"http://{self.config['rpc']['host']}:{self.config['rpc']['port']}"
-        self.rpc_user = self.config['rpc']['user']
-        self.rpc_password = self.config['rpc']['password']
+        self.rpc_user = self.config["rpc"]["user"]
+        self.rpc_password = self.config["rpc"]["password"]
         logger.info("FlopcoinWallet initialized.")
 
     def _load_config(self, config_path):
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 config = yaml.safe_load(f)
             logger.info(f"Configuration loaded from {config_path}")
             return config
@@ -42,7 +41,7 @@ class FlopcoinWallet:
             raise
 
     def _make_rpc_call(self, method, params=None):
-        headers = {'content-type': 'application/json'}
+        headers = {"content-type": "application/json"}
         payload = {
             "method": method,
             "params": params if params is not None else [],
@@ -52,18 +51,15 @@ class FlopcoinWallet:
         try:
             logger.info(f"Attempting RPC call: {method} with params: {params}")
             response = requests.post(
-                self.rpc_url,
-                json=payload,
-                headers=headers,
-                auth=(self.rpc_user, self.rpc_password)
+                self.rpc_url, json=payload, headers=headers, auth=(self.rpc_user, self.rpc_password)
             )
             response.raise_for_status()
             rpc_response = response.json()
-            if rpc_response.get('error'):
+            if rpc_response.get("error"):
                 logger.error(f"RPC Error for {method}: {rpc_response['error']}")
-                return None, rpc_response['error']
+                return None, rpc_response["error"]
             logger.info(f"RPC call {method} successful.")
-            return rpc_response.get('result'), None
+            return rpc_response.get("result"), None
         except requests.exceptions.ConnectionError as e:
             logger.error(f"Network error connecting to Flopcoin Core: {e}")
             return None, f"Network error: {e}"
@@ -117,6 +113,7 @@ class FlopcoinWallet:
         logger.info(f"Transaction successful! TXID: {txid}")
         return txid, None
 
+
 if __name__ == "__main__":
     print("Running FlopcoinWallet examples...")
     wallet = FlopcoinWallet()
@@ -140,9 +137,9 @@ if __name__ == "__main__":
     #       Ensure your Flopcoin Core wallet has funds.
     test_address = "FLOP_TEST_ADDRESS_HERE"  # Replace with a valid Flopcoin address
     test_amount = 0.01
-    if new_address: # Use the newly generated address as a recipient for testing purposes
+    if new_address:  # Use the newly generated address as a recipient for testing purposes
         test_address = new_address
-    
+
     print(f"Attempting to send {test_amount} Flop Coin to {test_address}")
     txid, send_error = wallet.send_to_address(test_address, test_amount)
     if txid:
@@ -160,4 +157,4 @@ if __name__ == "__main__":
     if not txid_empty_address:
         print(f"As expected, transaction with empty address failed: {send_error_empty_address}")
 
-    print("\nFlopcoinWallet examples finished. Check /var/log/duxnet/wallet.log for detailed logs.") 
+    print("\nFlopcoinWallet examples finished. Check /var/log/duxnet/wallet.log for detailed logs.")

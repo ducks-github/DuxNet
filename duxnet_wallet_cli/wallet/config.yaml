@@ -1,6 +1,6 @@
 rpc:
   host: 127.0.0.1
-  port: 32553
+  port: 8332
   user: flopcoinrpc
   password: your_secure_password
 wallet:

@@ -4,10 +4,12 @@ Wallet Client for DuxOS Desktop
 Handles wallet operations and user account management via duxos_wallet API.
 """
 
+from typing import Any, Dict, Optional
+
 import requests
-from typing import Optional, Dict, Any
 
 WALLET_API_URL = "http://localhost:8002"  # Can be made configurable
+
 
 class WalletClient:
     def __init__(self, base_url: str = WALLET_API_URL):
@@ -35,4 +37,4 @@ class WalletClient:
     def get_transactions(self, user_id: str) -> list:
         response = requests.get(f"{self.base_url}/wallet/{user_id}/transactions")
         response.raise_for_status()
-        return response.json() 
+        return response.json()

@@ -6,4 +6,4 @@ and dispute resolution capabilities.
 """
 
 __version__ = "1.0.0"
-__author__ = "DuxOS Team" 
+__author__ = "DuxOS Team"

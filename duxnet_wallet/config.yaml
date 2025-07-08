@@ -9,6 +9,13 @@ flopcoin:
   timeout: 30
   use_ssl: false
 
+# RPC Configuration (for wallet CLI compatibility)
+rpc:
+  host: "127.0.0.1"
+  port: 32553
+  user: "flopcoinrpc"
+  password: "password123"
+
 # Wallet Configuration
 wallet:
   name: "duxnet_wallet"
