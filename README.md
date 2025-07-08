@@ -1,6 +1,6 @@
 # DuxNet
 
-(https://github.com/ducks-github/DuxNet/releases/tag/v2.3.1)
+
 
 DuxNet is a modular, decentralized application platform with a Python GUI and CLI, supporting distributed computing, payments, and a decentralized app store. This repository contains the core DuxNet application, including the desktop GUI, wallet, store, daemon, and registry modules.
 
