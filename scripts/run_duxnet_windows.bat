@@ -49,6 +49,17 @@ if exist "%PROJECT_ROOT%\requirements.txt" (
     echo.
 )
 
+REM Install desktop GUI dependencies
+if exist "%PROJECT_ROOT%\frontend\duxnet_desktop\requirements.txt" (
+    echo Installing desktop GUI dependencies...
+    python -m pip install -r "%PROJECT_ROOT%\frontend\duxnet_desktop\requirements.txt"
+    if errorlevel 1 (
+        echo WARNING: Failed to install some desktop dependencies
+        echo Continuing anyway...
+    )
+    echo.
+)
+
 REM Check if the launcher script exists
 if not exist "%SCRIPT_DIR%duxnet_launcher_cross_platform.py" (
     echo ERROR: Launcher script not found!
