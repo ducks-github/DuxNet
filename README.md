@@ -2,13 +2,48 @@
 
 DuxNet is a modular, decentralized application platform with a Python GUI and CLI, supporting distributed computing, payments, and a decentralized app store. This repository contains the core DuxNet application, including the desktop GUI, wallet, store, daemon, and registry modules.
 
+## 🏗️ **New Organized Structure**
+
+The codebase has been reorganized for better maintainability:
+
+```
+DuxNet/
+├── backend/           # All backend services and APIs
+│   ├── duxnet_store/  # Store service (API/App Store)
+│   ├── duxos_escrow/  # Escrow service
+│   ├── duxnet_wallet/ # Wallet service
+│   └── ...           # Other backend modules
+├── frontend/          # Desktop GUI and frontend code
+│   ├── duxnet_desktop/
+│   └── duxos_desktop/
+├── shared/            # Shared utilities and constants
+├── scripts/           # Setup, launcher, and utility scripts
+├── docs/              # Documentation
+└── tests/             # Test files
+```
+
+---
+
+## 🚀 Multi-Cryptocurrency Wallet & Escrow Support
+
+DuxNet now supports escrow and wallet operations for the top 10 cryptocurrencies (BTC, ETH, USDT, BNB, XRP, SOL, ADA, DOGE, TON, TRX) in addition to Flopcoin (FLOP).
+
+- **MultiCryptoWallet**: Unified wallet interface for multiple cryptocurrencies.
+- **Multi-Crypto Escrow**: Escrow contracts can be created, funded, and released in any supported currency.
+- **Mock Wallets**: For development, mock wallets are used if real crypto libraries are not installed.
+- **Optional Dependencies**: To use real Bitcoin, Ethereum, or XRP wallets, install the optional dependencies listed in `backend/duxnet_wallet/requirements.txt`.
+
+---
+
 ## 🚀 Quickstart
 
 ### **Prerequisites**
 - Python 3.8+  
 - pip (Python package manager)  
-- Flopcoin Core daemon (required for wallet functionality)  
+- Flopcoin Core daemon (required for Flopcoin wallet functionality)  
   - Download and run from: https://github.com/flopcoin/flopcoin-core
+- (Optional) For real multi-crypto support:
+  - `bitcoinlib`, `web3`, `eth-account`, `xrpl-py` (see `backend/duxnet_wallet/requirements.txt`)
 
 ### **Installation**
 ```bash
@@ -22,24 +57,45 @@ source .venv/bin/activate
 
 # Install all Python dependencies
 pip install -r requirements.txt
+# (Optional) For real multi-crypto support:
+pip install -r backend/duxnet_wallet/requirements.txt
 ```
 
 ### **Configuration**
-- **Wallet:** Edit `duxnet_wallet/config.yaml` with your Flopcoin RPC credentials.
-- **Store:** Edit `duxnet_store/config.yaml` for store settings.
-- **Daemon:** Edit `duxnet_daemon_template/config.yaml` for daemon settings.
+- **Wallet:** Edit `backend/duxnet_wallet/config.yaml` with your Flopcoin RPC credentials.
+- **Multi-Crypto Wallet:** Edit `backend/duxnet_wallet/multi_crypto_config.yaml` for multi-crypto settings.
+- **Store:** Edit `backend/duxnet_store/config.yaml` for store settings.
+- **Daemon:** Edit `scripts/duxnet_daemon_template/config.yaml` for daemon settings.
 
 ### **Running the Application**
-- **Desktop GUI:**  
-  `python duxnet_desktop/desktop_manager.py`
-- **Wallet CLI:**  
-  `python duxnet_wallet_cli/cli.py [new-address|balance|send] [options]`
-- **Store Backend:**  
-  `python3 -m duxnet_store.main --config duxnet_store/config.yaml`
-- **Daemon Example:**  
-  `python duxnet_daemon_template/daemon.py start`
-- **Registry CLI:**  
-  `python duxnet_registry/cli.py [register|list|update|deregister] [options]`
+
+#### **Option 1: All-in-One Launcher (Recommended)**
+```bash
+# Run all services and desktop GUI
+python scripts/duxnet_launcher_cross_platform.py
+
+# Or use the convenience scripts
+./scripts/run_duxnet.sh      # Linux/Mac
+scripts/run_duxnet.bat       # Windows
+```
+
+#### **Option 2: Individual Services**
+```bash
+# Desktop GUI
+python -m frontend.duxnet_desktop.desktop_manager
+
+# Store Backend
+python -m backend.duxnet_store.main --config backend/duxnet_store/config.yaml
+
+# Escrow Service
+python -m backend.duxos_escrow.escrow_service
+
+# Wallet CLI
+python frontend/duxnet_wallet_cli/cli.py [new-address|balance|send] [options]
+
+# Registry CLI
+python -m backend.duxnet_registry.registry.cli [register|list|update|deregister] [options]
+```
 
 ### **Flopcoin Core Setup**
 - Download Flopcoin Core from [Flopcoin GitHub](https://github.com/flopcoin/flopcoin-core).
@@ -47,7 +103,7 @@ pip install -r requirements.txt
   ```bash
   flopcoind -daemon
   ```
-- Ensure your RPC credentials in `duxnet_wallet/config.yaml` match your Flopcoin Core configuration.
+- Ensure your RPC credentials in `backend/duxnet_wallet/config.yaml` match your Flopcoin Core configuration.
 
 ### **Troubleshooting & Common Issues**
 - **pip install error ("externally-managed-environment"):**  
@@ -58,6 +114,9 @@ pip install -r requirements.txt
 - **Missing dependencies:**  
   - Ensure you are using the correct Python version (`python3 --version`).
   - Run `pip install -r requirements.txt` inside your virtual environment.
+  - For real multi-crypto support, run `pip install -r backend/duxnet_wallet/requirements.txt`.
+- **Multi-crypto wallet/escrow not working:**
+  - By default, mock wallets are used for development. For real crypto, install the optional dependencies.
 - **Port conflicts:**  
   - If port 8000 is in use, use `--port 8001` or edit the config file.
 
@@ -77,10 +136,10 @@ Use our automated setup script for a complete development environment:
 # Clone and setup in one command
 git clone https://github.com/ducks-github/DuxNet.git
 cd DuxNet
-./setup.sh
+./scripts/setup.sh
 
 # For development with pre-commit hooks
-./setup.sh --with-pre-commit
+./scripts/setup.sh --with-pre-commit
 ```
 
 ### **Docker Development**
@@ -152,109 +211,47 @@ pre-commit run --all-files
 
 DuxNet follows a modular, decentralized architecture with clear separation of concerns. Each module operates independently while communicating through well-defined interfaces.
 
-```mermaid
-graph TB
-    subgraph "User Interface Layer"
-        GUI[Desktop GUI<br/>PyQt Application]
-        CLI[CLI Tools<br/>Wallet & Registry]
-    end
-    
-    subgraph "Core Services Layer"
-        Store[Store Service<br/>API/App Store]
-        Wallet[Wallet Service<br/>Flopcoin Integration]
-        Registry[Registry Service<br/>Node Management]
-        Daemon[Daemon Framework<br/>Network Services]
-    end
-    
-    subgraph "Infrastructure Layer"
-        DB[(Database<br/>SQLite/PostgreSQL)]
-        IPFS[IPFS Storage<br/>Distributed Metadata]
-        Blockchain[Flopcoin Core<br/>Blockchain Network]
-    end
-    
-    subgraph "External Integrations"
-        TaskEngine[Task Engine<br/>Distributed Computing]
-        Escrow[Escrow Service<br/>Payment Management]
-        Airdrop[Airdrop Service<br/>Community Rewards]
-    end
-    
-    %% User Interface connections
-    GUI --> Store
-    GUI --> Wallet
-    GUI --> Registry
-    CLI --> Wallet
-    CLI --> Registry
-    
-    %% Core Services connections
-    Store --> DB
-    Store --> IPFS
-    Wallet --> Blockchain
-    Registry --> DB
-    Registry --> IPFS
-    Daemon --> Registry
-    
-    %% External integrations
-    Store --> TaskEngine
-    Wallet --> Escrow
-    Registry --> Airdrop
-    
-    %% Cross-service communication
-    Store -.-> Wallet
-    TaskEngine -.-> Wallet
-    Escrow -.-> Registry
-    
-    classDef guiClass fill:#e1f5fe
-    classDef serviceClass fill:#f3e5f5
-    classDef infraClass fill:#e8f5e8
-    classDef externalClass fill:#fff3e0
-    
-    class GUI,CLI guiClass
-    class Store,Wallet,Registry,Daemon serviceClass
-    class DB,IPFS,Blockchain infraClass
-    class TaskEngine,Escrow,Airdrop externalClass
-```
+### **Backend Services**
+- **Store Service** (`backend/duxnet_store/`): API/App Store with service registration, search, and reviews
+- **Escrow Service** (`backend/duxos_escrow/`): Multi-crypto escrow contract management
+- **Wallet Service** (`backend/duxnet_wallet/`): Multi-crypto wallet operations
+- **Registry Service** (`backend/duxnet_registry/`): Node registration and discovery
+- **Task Engine** (`backend/duxos_tasks/`): Distributed computing task management
 
-### **Key Architectural Principles**
+### **Frontend Applications**
+- **Desktop GUI** (`frontend/duxnet_desktop/`): PyQt5-based desktop application
+- **Wallet CLI** (`frontend/duxnet_wallet_cli/`): Command-line wallet interface
 
-- **Modularity**: Each component operates independently with well-defined interfaces
-- **Decentralization**: No single point of failure; distributed metadata storage
-- **Security-First**: Sandboxed execution, encrypted communications, secure key management
-- **Scalability**: Horizontal scaling through node addition and load balancing
+### **Shared Components**
+- **Models** (`backend/*/models/`): Data models and schemas
+- **API Routes** (`backend/*/api/`): REST API endpoints
+- **Services** (`backend/*/services/`): Business logic layer
 
-### **Component Interactions**
+## 📚 Documentation
 
-1. **Desktop GUI** provides a user-friendly interface for browsing apps, managing wallet, and monitoring system status
-2. **Store Service** manages decentralized app/API metadata and handles discovery/search
-3. **Wallet Service** handles Flopcoin transactions and provides secure wallet operations
-4. **Registry Service** manages node registration, health monitoring, and network topology
-5. **Daemon Framework** provides standardized foundation for system services
-6. **Task Engine** enables distributed computing with result verification
-7. **Escrow Service** manages payment escrow for API transactions
-8. **Airdrop Service** distributes community rewards to active nodes
+- **Build Guide**: `docs/BUILD_GUIDE.md`
+- **Implementation Summary**: `docs/IMPLEMENTATION_SUMMARY.md`
+- **Multi-Crypto Integration**: `docs/MULTI_CRYPTO_ESCROW_INTEGRATION.md`
+- **Executable Guide**: `docs/README_DUXNET_EXE.md`
 
-## Directory Structure
+## 🤝 Contributing
 
-- `duxnet_desktop/` — PyQt-based desktop GUI for browsing, installing, and managing DuxNet apps and APIs
-- `duxnet_wallet/` — Flop Coin wallet integration (Python, JSON-RPC)
-- `duxnet_store/` — Decentralized app/API store backend and logic
-- `duxnet_daemon_template/` — Daemon framework for network, escrow, airdrop, etc.
-- `duxnet_registry/` — Node registry CLI and services
-- `duxnet_wallet_cli/` — CLI wallet tools
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Modular Structure
-- **Desktop GUI:** User interface for app store, wallet, and account management.
-- **Wallet:** Handles Flop Coin transactions, balance, and address management.
-- **Store:** Decentralized API/app store logic and metadata.
-- **Daemon:** Framework for network, escrow, and airdrop services.
-- **Registry:** Node management and health tracking.
+## 📄 License
 
-## Contributing
-Pull requests are welcome! Please see module READMEs for details on each component.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Documentation
-- [API Reference](docs/api_reference.md) - Comprehensive API documentation for all modules
-- [Architecture Documentation](docs/architecture.md) - Detailed technical architecture
-- [Development Plan](docs/development_plan.md) - Project roadmap and development phases
+## 🆘 Support
 
-## License
-MIT
+- **Issues**: [GitHub Issues](https://github.com/ducks-github/DuxNet/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/ducks-github/DuxNet/discussions)
+- **Documentation**: Check the `docs/` directory for detailed guides
+
+---
+
+**DuxNet** - Building the future of decentralized applications! 🚀 

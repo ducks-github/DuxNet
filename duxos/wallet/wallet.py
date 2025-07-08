@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, Dict, Optional, Tuple
 
 import requests
 import yaml
@@ -34,7 +34,7 @@ class FlopcoinWallet:
                 config = yaml.safe_load(f)
             logger.info(f"Configuration loaded from {config_path}")
             if isinstance(config, dict):
-            return config
+                return config
             else:
                 logger.error("Config file does not contain a dictionary")
                 raise ValueError("Invalid config format")
@@ -96,7 +96,11 @@ class FlopcoinWallet:
             logger.warning(f"Failed to get balance: {error}")
             return None
         logger.info(f"Retrieved balance: {balance}")
-        return balance
+        try:
+            return float(balance) if balance is not None else None
+        except (TypeError, ValueError):
+            logger.error(f"Balance value is not a float: {balance}")
+            return None
 
     def get_wallet_info(self) -> Dict[str, Any]:
         """Retrieve wallet info as a dictionary."""
