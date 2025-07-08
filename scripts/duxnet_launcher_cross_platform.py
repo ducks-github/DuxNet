@@ -38,7 +38,7 @@ def main():
     
     # List of (module_path, args) for each service - updated for new structure
     SERVICES = [
-        ("backend.duxnet_store.main", ["--config", "backend/duxnet_store/config.yaml"]),
+        ("backend.duxnet_store.main", ["--config", os.path.join("backend", "duxnet_store", "config.yaml")]),
         ("backend.duxos_escrow.escrow_service", []),
     ]
 
@@ -48,16 +48,16 @@ def main():
     print("\n🔧 Starting DuxNet core services...")
     
     for module_path, args in SERVICES:
-        # Check if the module directory exists
-        module_dir = module_path.replace(".", "/")
+        # Check if the module directory exists (cross-platform)
+        module_dir = os.path.join(*module_path.split("."))
         if not os.path.exists(module_dir):
-            print(f"⚠️  Warning: {module_dir} not found, skipping.")
+            print(f"⚠️  Warning: {module_dir} not found (checked: {os.path.abspath(module_dir)}), skipping.")
             continue
         
-        # Check if the main file exists
+        # Check if the main file exists (cross-platform)
         main_file = os.path.join(module_dir, module_path.split(".")[-1] + ".py")
         if not os.path.exists(main_file):
-            print(f"⚠️  Warning: {main_file} not found, skipping.")
+            print(f"⚠️  Warning: {main_file} not found (checked: {os.path.abspath(main_file)}), skipping.")
             continue
             
         print(f"✅ Found: {main_file}")
@@ -67,7 +67,7 @@ def main():
             time.sleep(2)
 
     # Start the Desktop GUI
-    desktop_file = "frontend/duxnet_desktop/desktop_manager.py"
+    desktop_file = os.path.join("frontend", "duxnet_desktop", "desktop_manager.py")
     if os.path.exists(desktop_file):
         print(f"\n🖥️  Launching Desktop GUI...")
         print(f"✅ Found: {desktop_file}")
@@ -75,7 +75,7 @@ def main():
         if gui_proc:
             procs.append(gui_proc)
     else:
-        print(f"⚠️  Desktop GUI not found: {desktop_file}")
+        print(f"⚠️  Desktop GUI not found: {desktop_file} (checked: {os.path.abspath(desktop_file)})")
 
     print(f"\n✅ All services started! ({len(procs)} processes running)")
     print("📋 Services:")
