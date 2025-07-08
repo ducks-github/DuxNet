@@ -37,8 +37,8 @@ from .service_detail import ServiceDetailView
 from .settings import SettingsWidget
 from .user_account import UserAccountWidget
 from .advanced_features import AdvancedFeaturesTab
-from duxnet_desktop.ui.advanced_features import EscrowClient
-from duxnet_desktop.ui.advanced_features import TaskClient
+from frontend.duxnet_desktop.ui.advanced_features import EscrowClient
+from frontend.duxnet_desktop.ui.advanced_features import TaskClient
 import json
 
 # --- New tab widgets ---

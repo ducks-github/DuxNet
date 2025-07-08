@@ -9,9 +9,9 @@ import sys
 
 from PyQt5.QtWidgets import QApplication
 
-from duxnet_desktop.api_client import StoreApiClient
-from duxnet_desktop.ui.main_window import MainWindow
-from duxnet_desktop.wallet_client import WalletClient
+from frontend.duxnet_desktop.api_client import StoreApiClient
+from frontend.duxnet_desktop.ui.main_window import MainWindow
+from frontend.duxnet_desktop.wallet_client import WalletClient
 
 
 def main():
