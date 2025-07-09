@@ -86,10 +86,11 @@ def main():
                 if proc.poll() is not None:
                     print(f"⚠️  Process {proc.pid} has stopped")
                     stdout, stderr = proc.communicate()
+                    if stdout:
+                        print(f"   STDOUT: {stdout.decode(errors='replace')}")
                     if stderr:
-                        print(f"   Error: {stderr.decode()[:200]}...")
+                        print(f"   STDERR: {stderr.decode(errors='replace')}")
                     procs.remove(proc)
-            
             if not procs:
                 print("❌ All processes have stopped")
                 break

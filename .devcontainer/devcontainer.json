@@ -1,0 +1,14 @@
+// See https://aka.ms/devcontainer for the full devcontainer.json specification
+{
+    "name": "DuxNet Dev Container",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "features": {},
+    "settings": {},
+    "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter"
+    ],
+    "postCreateCommand": "pip install -r requirements.txt"
+}

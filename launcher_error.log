@@ -1,0 +1,40 @@
+============================================================
+🚀 DuxNet All-in-One Launcher
+============================================================
+Platform: Linux 6.8.0-1027-azure
+Python: 3.12.1 (main, May 30 2025, 12:50:35) [GCC 13.3.0]
+============================================================
+📁 Working directory: /workspaces/DuxNet
+
+🔧 Starting DuxNet core services...
+✅ Found: backend/duxnet_store/main.py
+Starting: /home/codespace/.python/current/bin/python3 -m backend.duxnet_store.main --config backend/duxnet_store/config.yaml
+✅ Found: backend/duxos_escrow/escrow_service.py
+Starting: /home/codespace/.python/current/bin/python3 -m backend.duxos_escrow.escrow_service
+
+🖥️  Launching Desktop GUI...
+✅ Found: frontend/duxnet_desktop/desktop_manager.py
+Starting: /home/codespace/.python/current/bin/python3 -m frontend.duxnet_desktop.desktop_manager
+
+✅ All services started! (3 processes running)
+📋 Services:
+   1. Process 59687
+   2. Process 59749
+   3. Process 59776
+
+🛑 Press Ctrl+C to stop all services
+============================================================
+⚠️  Process 59687 has stopped
+   Error: Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/workspaces/DuxNet/backend/duxnet_store/main.py", li...
+⚠️  Process 59749 has stopped
+   Error: INFO:__main__:Escrow database initialized successfully
+/workspaces/DuxNet/backend/duxos_escrow/escrow_service.py:64: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for remo...
+⚠️  Process 59776 has stopped
+   Error: Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/workspaces/DuxNet/frontend/duxnet_desktop/desktop_m...
+❌ All processes have stopped
