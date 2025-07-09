@@ -81,6 +81,8 @@ class UserAccountWidget(QWidget):
         for currency in ["BTC", "ETH", "FLOP", "USDT", "BNB", "XRP", "SOL", "ADA", "DOGE", "TON", "TRX"]:
             balance_label = QLabel("0.0")
             address_label = QLabel("-")
+            powered_by_label = QLabel("")
+            powered_by_label.setToolTip("")
             copy_button = QToolButton()
             copy_button.setText("Copy")
             copy_button.setToolTip(f"Copy {currency} address")
@@ -93,7 +95,9 @@ class UserAccountWidget(QWidget):
             row_layout.setContentsMargins(0, 0, 0, 0)
             row_layout.addWidget(balance_label)
             row_layout.addWidget(address_label)
+            row_layout.addWidget(powered_by_label)
             row_layout.addWidget(copy_button)
+            row_widget.powered_by_label = powered_by_label
             self.crypto_balances_layout.addRow(f"{currency}:", row_widget)
         profile_layout.addWidget(self.crypto_balances_group)
 
@@ -174,10 +178,20 @@ class UserAccountWidget(QWidget):
             for currency in self.crypto_balance_labels.keys():
                 value = balances.get(currency, {}).get("balance", 0.0)
                 address = balances.get(currency, {}).get("address", "-")
+                powered_by = balances.get(currency, {}).get("powered_by", "")
                 if self.crypto_balance_labels.get(currency):
                     self.crypto_balance_labels[currency].setText(f"{value:.8f}")
                 if self.crypto_address_labels.get(currency):
                     self.crypto_address_labels[currency].setText(address)
+                # Show Trust Wallet badge/tooltip if powered by wallet-core
+                row_widget = self.crypto_balances_layout.itemAt(self.crypto_balances_layout.rowCount()-1, 1).widget()
+                if hasattr(row_widget, 'powered_by_label'):
+                    if powered_by == "wallet-core":
+                        row_widget.powered_by_label.setText("Trust Wallet")
+                        row_widget.powered_by_label.setToolTip("Powered by Trust Wallet wallet-core")
+                    else:
+                        row_widget.powered_by_label.setText("")
+                        row_widget.powered_by_label.setToolTip("")
         except Exception as e:
             for label in self.crypto_balance_labels.values():
                 if label:

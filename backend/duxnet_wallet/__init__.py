@@ -12,9 +12,11 @@ __author__ = "DuxNet Team"
 try:
     from .wallet import FlopcoinWallet
     from .multi_crypto_wallet import MultiCryptoWallet
+    from .wallet_core_wrapper import WalletCoreWrapper
 except ImportError:
     # Handle case where dependencies are not available
     FlopcoinWallet = None
     MultiCryptoWallet = None
+    WalletCoreWrapper = None
 
-__all__ = ["FlopcoinWallet", "MultiCryptoWallet"] 
+__all__ = ["FlopcoinWallet", "MultiCryptoWallet", "WalletCoreWrapper"]

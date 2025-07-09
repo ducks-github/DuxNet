@@ -16,10 +16,12 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 # Cryptocurrency-specific imports (optional)
 BITCOIN_AVAILABLE = False
 ETHEREUM_AVAILABLE = False
 XRP_AVAILABLE = False
+WALLET_CORE_AVAILABLE = False
 
 try:
     import bitcoinlib
@@ -44,6 +46,12 @@ try:
     XRP_AVAILABLE = True
 except ImportError:
     logger.warning("xrpl-py not available. XRP functionality will be limited.")
+
+try:
+    from .wallet_core_wrapper import WalletCoreWrapper
+    WALLET_CORE_AVAILABLE = True
+except ImportError:
+    WALLET_CORE_AVAILABLE = False
 
 
 class CryptoWallet(ABC):
@@ -188,30 +196,32 @@ class MultiCryptoWallet:
     def _initialize_wallets(self):
         """Initialize cryptocurrency wallets"""
         currencies = self.config.get('currencies', {})
-        
         for currency, config in currencies.items():
             if not config.get('enabled', False):
                 continue
-                
             try:
-                if currency == 'BTC':
+                # Prefer wallet-core if available and not BTC/ETH/XRP
+                if WALLET_CORE_AVAILABLE and currency not in ('BTC', 'ETH', 'XRP'):
+                    self.wallets[currency] = WalletCoreWrapper(currency)
+                    logger.info(f"Initialized {currency} wallet using wallet-core")
+                elif currency == 'BTC':
                     if BITCOIN_AVAILABLE:
-                        # Use real Bitcoin wallet if available
                         self.wallets[currency] = BitcoinWallet(config)
+                    elif WALLET_CORE_AVAILABLE:
+                        self.wallets[currency] = WalletCoreWrapper('bitcoin')
+                        logger.info("Initialized BTC wallet using wallet-core")
                     else:
-                        # Use mock wallet
                         self.wallets[currency] = MockBitcoinWallet(config)
                 elif currency == 'ETH':
                     if ETHEREUM_AVAILABLE:
-                        # Use real Ethereum wallet if available
                         self.wallets[currency] = EthereumWallet(config)
+                    elif WALLET_CORE_AVAILABLE:
+                        self.wallets[currency] = WalletCoreWrapper('ethereum')
+                        logger.info("Initialized ETH wallet using wallet-core")
                     else:
-                        # Use mock wallet
                         self.wallets[currency] = MockEthereumWallet(config)
                 else:
-                    # For other currencies, use mock wallet
                     self.wallets[currency] = MockBitcoinWallet(config)
-                    
                 logger.info(f"Initialized {currency} wallet")
             except Exception as e:
                 logger.error(f"Failed to initialize {currency} wallet: {e}")
