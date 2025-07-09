@@ -118,8 +118,8 @@ class WalletTab(QWidget):
         # --- Balances Section ---
         balances_group = QGroupBox("Multi-Crypto Balances")
         balances_layout = QVBoxLayout(balances_group)
-        self.balances_table = QTableWidget(0, 2)
-        self.balances_table.setHorizontalHeaderLabels(["Currency", "Balance"])
+        self.balances_table = QTableWidget(0, 3)
+        self.balances_table.setHorizontalHeaderLabels(["Currency", "Balance", "Powered by"])
         self.balances_table.horizontalHeader().setStretchLastSection(True)
         balances_layout.addWidget(self.balances_table)
         layout.addWidget(balances_group)
@@ -179,6 +179,16 @@ class WalletTab(QWidget):
                 balance_item = QTableWidgetItem(str(info.get("balance", 0.0)))
                 balance_item.setFlags(balance_item.flags() & ~Qt.ItemIsEditable)
                 self.balances_table.setItem(i, 1, balance_item)
+                # Trust Wallet badge/tooltip
+                powered_by = info.get("powered_by", "")
+                badge = QTableWidgetItem()
+                if powered_by == "wallet-core":
+                    badge.setText("Trust Wallet")
+                    badge.setToolTip("Powered by Trust Wallet wallet-core")
+                else:
+                    badge.setText("-")
+                badge.setFlags(badge.flags() & ~Qt.ItemIsEditable)
+                self.balances_table.setItem(i, 2, badge)
         except Exception as e:
             self.status_label.setText(f"Error loading balances: {e}")
 
