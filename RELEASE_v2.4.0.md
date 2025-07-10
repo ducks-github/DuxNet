@@ -6,11 +6,15 @@ This release marks the start of a new phase: interactive debugging of the deskto
 
 ---
 
+
 ## What's New
 
 - **Launcher and backend services are stable and cross-platform**
-- **Desktop GUI debugging will proceed stepwise with user interaction**
-- **User will run the GUI and report print output and errors for targeted fixes**
+- **Desktop GUI dependency fixes and system library instructions added**
+- **PyQt5 and requests dependencies now auto-installed on first run**
+- **Stepwise debugging for headless/container environments**
+- **All recent commits pushed to main branch**
+
 
 ---
 
@@ -24,17 +28,21 @@ This release marks the start of a new phase: interactive debugging of the deskto
 4. **Start DuxNet**
    - Windows: `scripts\run_duxnet_windows.bat` or `scripts\run_duxnet.bat`
    - Linux/Mac: `scripts/run_duxnet.sh`
-5. **Run the desktop GUI directly and report print output and errors**
-   ```cmd
+5. **Run the desktop GUI directly**
+   ```bash
    python -m frontend.duxnet_desktop.desktop_manager
    ```
+   - If running in a headless or container environment, see README for troubleshooting Qt/X11 issues and required system libraries.
+
 
 ---
+
 
 ## Next Steps
 
 - User will interact with the release and report print output and errors
 - We will continue debugging step by step based on user feedback
+- All code and dependency updates are now available on the main branch
 
 ---
 
