@@ -12,6 +12,12 @@ STORE_API_URL = "http://localhost:8000"  # Can be made configurable
 
 
 class StoreApiClient:
+    def register_service(self, service_data: dict, owner_id: str, owner_name: str) -> dict:
+        """Register a new API/service in the store."""
+        params = {"owner_id": owner_id, "owner_name": owner_name}
+        response = requests.post(f"{self.base_url}/services", json=service_data, params=params)
+        response.raise_for_status()
+        return response.json()
     def __init__(self, base_url: str = STORE_API_URL):
         self.base_url = base_url.rstrip("/")
 

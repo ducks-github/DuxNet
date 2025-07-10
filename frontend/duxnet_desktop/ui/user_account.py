@@ -22,9 +22,12 @@ from PyQt5.QtWidgets import (
 )
 
 
+
 class UserAccountWidget(QWidget):
-    login_requested = pyqtSignal(str, str)  # user_id, user_name
+    login_requested = pyqtSignal(str, str, str)  # user_id, user_name, password
     logout_requested = pyqtSignal()
+    show_public_key_dialog = pyqtSignal(str, str)  # currency, password
+    show_private_key_dialog = pyqtSignal(str, str)  # currency, password
 
     def __init__(self, api_client, wallet_client, parent=None):
         super().__init__(parent)
@@ -47,6 +50,11 @@ class UserAccountWidget(QWidget):
         self.user_name_input = QLineEdit()
         self.user_name_input.setPlaceholderText("Enter user name")
         login_layout.addRow("User Name:", self.user_name_input)
+
+        self.password_input = QLineEdit()
+        self.password_input.setPlaceholderText("Password")
+        self.password_input.setEchoMode(QLineEdit.Password)
+        login_layout.addRow("Password:", self.password_input)
 
         self.login_button = QPushButton("Login")
         self.login_button.clicked.connect(self.login)
@@ -78,6 +86,8 @@ class UserAccountWidget(QWidget):
         self.crypto_balance_labels = {}
         self.crypto_address_labels = {}
         self.crypto_copy_buttons = {}
+        self.crypto_pubkey_buttons = {}
+        self.crypto_privkey_buttons = {}
         for currency in ["BTC", "ETH", "FLOP", "USDT", "BNB", "XRP", "SOL", "ADA", "DOGE", "TON", "TRX"]:
             balance_label = QLabel("0.0")
             address_label = QLabel("-")
@@ -87,9 +97,19 @@ class UserAccountWidget(QWidget):
             copy_button.setText("Copy")
             copy_button.setToolTip(f"Copy {currency} address")
             copy_button.clicked.connect(lambda checked, c=currency: self.copy_crypto_address(c))
+            pubkey_button = QToolButton()
+            pubkey_button.setText("Public Key")
+            pubkey_button.setToolTip(f"Show {currency} public key")
+            pubkey_button.clicked.connect(lambda checked, c=currency: self.show_public_key_dialog.emit(c, self.get_password()))
+            privkey_button = QToolButton()
+            privkey_button.setText("Private Key")
+            privkey_button.setToolTip(f"Reveal {currency} private key (danger)")
+            privkey_button.clicked.connect(lambda checked, c=currency: self.show_private_key_dialog.emit(c, self.get_password()))
             self.crypto_balance_labels[currency] = balance_label
             self.crypto_address_labels[currency] = address_label
             self.crypto_copy_buttons[currency] = copy_button
+            self.crypto_pubkey_buttons[currency] = pubkey_button
+            self.crypto_privkey_buttons[currency] = privkey_button
             row_widget = QWidget()
             row_layout = QHBoxLayout(row_widget)
             row_layout.setContentsMargins(0, 0, 0, 0)
@@ -97,6 +117,8 @@ class UserAccountWidget(QWidget):
             row_layout.addWidget(address_label)
             row_layout.addWidget(powered_by_label)
             row_layout.addWidget(copy_button)
+            row_layout.addWidget(pubkey_button)
+            row_layout.addWidget(privkey_button)
             row_widget.powered_by_label = powered_by_label
             self.crypto_balances_layout.addRow(f"{currency}:", row_widget)
         profile_layout.addWidget(self.crypto_balances_group)
@@ -117,11 +139,12 @@ class UserAccountWidget(QWidget):
         """Handle user login"""
         user_id = self.user_id_input.text().strip()
         user_name = self.user_name_input.text().strip()
+        password = self.password_input.text()
 
-        if not user_id or not user_name:
+        if not user_id or not user_name or not password:
             return  # Should show error message
 
-        self.current_user = {"user_id": user_id, "user_name": user_name}
+        self.current_user = {"user_id": user_id, "user_name": user_name, "password": password}
 
         # Update UI
         self.login_group.setVisible(False)
@@ -131,7 +154,7 @@ class UserAccountWidget(QWidget):
         self.load_user_data()
 
         # Emit signal
-        self.login_requested.emit(user_id, user_name)
+        self.login_requested.emit(user_id, user_name, password)
 
     def logout(self):
         """Handle user logout"""
@@ -144,6 +167,7 @@ class UserAccountWidget(QWidget):
         # Clear inputs
         self.user_id_input.clear()
         self.user_name_input.clear()
+        self.password_input.clear()
 
         # Emit signal
         self.logout_requested.emit()
@@ -155,13 +179,14 @@ class UserAccountWidget(QWidget):
 
         user_id = self.current_user["user_id"]
         user_name = self.current_user["user_name"]
+        password = self.current_user["password"]
 
         # Update user info
         self.user_info.setText(f"Welcome, {user_name}!")
 
         # Load wallet info
         try:
-            wallet = self.wallet_client.get_wallet(user_id)
+            wallet = self.wallet_client.get_wallet(user_id, password=password)
             if wallet:
                 self.wallet_address_label.setText(wallet.get("address", "Unknown"))
                 self.balance_label.setText(f"{wallet.get('balance', 0.0):.2f} FLOP")
@@ -174,7 +199,7 @@ class UserAccountWidget(QWidget):
 
         # Load multi-crypto balances
         try:
-            balances = self.wallet_client.get_all_balances()
+            balances = self.wallet_client.get_all_balances(password=password)
             for currency in self.crypto_balance_labels.keys():
                 value = balances.get(currency, {}).get("balance", 0.0)
                 address = balances.get(currency, {}).get("address", "-")
@@ -214,6 +239,16 @@ class UserAccountWidget(QWidget):
             clipboard.setText(address)
             self.crypto_copy_buttons[currency].setToolTip("Copied!")
             QTimer.singleShot(1200, lambda: self.crypto_copy_buttons[currency].setToolTip(f"Copy {currency} address"))
+
+    def get_password(self):
+        if self.current_user:
+            return self.current_user.get("password", "")
+        return ""
+
+    # Enhancement: allow password update for session security
+    def update_password(self, new_password):
+        if self.current_user:
+            self.current_user["password"] = new_password
 
     def get_current_user(self):
         """Get current user info"""

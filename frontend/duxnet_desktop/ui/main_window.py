@@ -61,6 +61,38 @@ class StoreTab(QWidget):
         search_layout.addWidget(self.refresh_button)
         layout.addLayout(search_layout)
 
+        # --- Register API Form ---
+        form_group = QGroupBox("Register New API/Service")
+        form_layout = QVBoxLayout(form_group)
+        self.name_input = QLineEdit()
+        self.name_input.setPlaceholderText("Service Name")
+        self.desc_input = QLineEdit()
+        self.desc_input.setPlaceholderText("Description (min 10 chars)")
+        self.category_input = QLineEdit()
+        self.category_input.setPlaceholderText("Category")
+        self.code_hash_input = QLineEdit()
+        self.code_hash_input.setPlaceholderText("Code Hash")
+        self.github_link_input = QLineEdit()
+        self.github_link_input.setPlaceholderText("GitHub Link (optional)")
+        self.usage_text_input = QTextEdit()
+        self.usage_text_input.setPlaceholderText("How to use this API (usage instructions)")
+        self.owner_id_input = QLineEdit()
+        self.owner_id_input.setPlaceholderText("Owner ID")
+        self.owner_name_input = QLineEdit()
+        self.owner_name_input.setPlaceholderText("Owner Name")
+        self.register_button = QPushButton("Register API/Service")
+        self.register_button.clicked.connect(self.handle_register_service)
+        form_layout.addWidget(self.name_input)
+        form_layout.addWidget(self.desc_input)
+        form_layout.addWidget(self.category_input)
+        form_layout.addWidget(self.code_hash_input)
+        form_layout.addWidget(self.github_link_input)
+        form_layout.addWidget(self.usage_text_input)
+        form_layout.addWidget(self.owner_id_input)
+        form_layout.addWidget(self.owner_name_input)
+        form_layout.addWidget(self.register_button)
+        layout.addWidget(form_group)
+
         # --- Service List and Details ---
         main_splitter = QSplitter(Qt.Horizontal)
         self.service_list = QListWidget()
@@ -76,6 +108,36 @@ class StoreTab(QWidget):
         layout.addWidget(self.status_label)
 
         self.load_services()
+
+    def handle_register_service(self):
+        name = self.name_input.text().strip()
+        desc = self.desc_input.text().strip()
+        category = self.category_input.text().strip()
+        code_hash = self.code_hash_input.text().strip()
+        github_link = self.github_link_input.text().strip()
+        usage_text = self.usage_text_input.toPlainText().strip()
+        owner_id = self.owner_id_input.text().strip()
+        owner_name = self.owner_name_input.text().strip()
+        if not (name and desc and category and code_hash and owner_id and owner_name):
+            self.status_label.setText("All fields are required.")
+            return
+        if len(desc) < 10:
+            self.status_label.setText("Description must be at least 10 characters.")
+            return
+        service_data = {
+            "name": name,
+            "description": desc,
+            "category": category,
+            "code_hash": code_hash,
+            "github_link": github_link,
+            "usage": usage_text,
+        }
+        try:
+            result = self.api_client.register_service(service_data, owner_id, owner_name)
+            self.status_label.setText(f"Service registered: {result.get('name', 'Success')}")
+            self.load_services()
+        except Exception as e:
+            self.status_label.setText(f"Registration failed: {e}")
 
     def load_services(self):
         self.service_list.clear()
@@ -441,14 +503,40 @@ class MainWindow(QMainWindow):
             self.user_account_widget = UserAccountWidget(self.api_client, self.wallet_client)
             self.user_account_widget.login_requested.connect(self.handle_user_login)
             self.user_account_widget.logout_requested.connect(self.handle_user_logout)
+            # Connect key access signals
+            if hasattr(self.user_account_widget, "show_public_key_dialog"):
+                self.user_account_widget.show_public_key_dialog.connect(self.handle_show_public_key)
+            if hasattr(self.user_account_widget, "show_private_key_dialog"):
+                self.user_account_widget.show_private_key_dialog.connect(self.handle_show_private_key)
             dock = QDockWidget("User Account", self)
             dock.setWidget(self.user_account_widget)
-            # Qt.LeftDockWidgetArea and Qt.RightDockWidgetArea are valid in PyQt5; linter false positives can be ignored.
             dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
             self.addDockWidget(Qt.RightDockWidgetArea, dock)
 
-    def handle_user_login(self, user_id, user_name):
-        self.current_user = {"user_id": user_id, "user_name": user_name}
+    def handle_show_public_key(self, currency, password):
+        try:
+            pubkey = self.wallet_client.get_public_key(currency, password=password)
+            QMessageBox.information(self, "Public Key", f"{currency} Public Key:\n{pubkey}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Could not retrieve public key: {e}")
+
+    def handle_show_private_key(self, currency, password):
+        confirm = QMessageBox.question(
+            self,
+            "Reveal Private Key",
+            f"Are you sure you want to reveal your {currency} private key?\nNever share this with anyone.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if confirm == QMessageBox.Yes:
+            try:
+                privkey = self.wallet_client.get_private_key(currency, password=password)
+                QMessageBox.information(self, "Private Key", f"{currency} Private Key:\n{privkey}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Could not retrieve private key: {e}")
+
+    def handle_user_login(self, user_id, user_name, password):
+        self.current_user = {"user_id": user_id, "user_name": user_name, "password": password}
         QMessageBox.information(self, "Login", f"Welcome, {user_name}!")
         return None
 
